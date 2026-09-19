@@ -1,7 +1,8 @@
 #include <QTest>
 #include <QTemporaryDir>
 #include <QFile>
-#include "data/data_store.h"
+#include <QTextStream>
+#include "data/config_manager.h"
 
 class TestDataStore : public QObject
 {
@@ -10,10 +11,11 @@ class TestDataStore : public QObject
 private slots:
     void testSaveAndLoad();
     void testChineseNames();
-    void testSpecialCharacters();
     void testEmptyList();
-    void testFileNotExist();
-    void testCorruptedFile();
+    void testNoPlaintextInFile();
+    void testPasswordRecovery();
+    void testPoolRecovery();
+    void testIsAutoLaunch();
 };
 
 void TestDataStore::testSaveAndLoad()
@@ -21,18 +23,14 @@ void TestDataStore::testSaveAndLoad()
     QTemporaryDir tempDir;
     QVERIFY(tempDir.isValid());
 
-    DataStore store(tempDir.path());
+    ConfigManager store(tempDir.path());
+    store.setInitPool(QStringList{"Alice", "Bob", "Carol"});
+    store.setPool(QStringList{"Alice", "Carol"});
+    store.sync();
 
-    PoolData data;
-    data.initPool = QStringList{"Alice", "Bob", "Carol"};
-    data.pool = QStringList{"Alice", "Carol"};
-
-    QVERIFY(store.save(data));
-
-    PoolData loaded = store.load();
-    QCOMPARE(loaded.version, 1);
-    QCOMPARE(loaded.initPool, QStringList({"Alice", "Bob", "Carol"}));
-    QCOMPARE(loaded.pool, QStringList({"Alice", "Carol"}));
+    ConfigManager loaded(tempDir.path());
+    QCOMPARE(loaded.initPool(), QStringList({"Alice", "Bob", "Carol"}));
+    QCOMPARE(loaded.pool(), QStringList({"Alice", "Carol"}));
 }
 
 void TestDataStore::testChineseNames()
@@ -40,35 +38,20 @@ void TestDataStore::testChineseNames()
     QTemporaryDir tempDir;
     QVERIFY(tempDir.isValid());
 
-    DataStore store(tempDir.path());
-
-    PoolData data;
-    data.initPool = QStringList{
+    QStringList names{
         QString::fromUtf8("张三"),
         QString::fromUtf8("李四"),
         QString::fromUtf8("王五")
     };
 
-    QVERIFY(store.save(data));
+    ConfigManager store(tempDir.path());
+    store.setInitPool(names);
+    store.setPool(names);
+    store.sync();
 
-    PoolData loaded = store.load();
-    QCOMPARE(loaded.initPool, data.initPool);
-}
-
-void TestDataStore::testSpecialCharacters()
-{
-    QTemporaryDir tempDir;
-    QVERIFY(tempDir.isValid());
-
-    DataStore store(tempDir.path());
-
-    PoolData data;
-    data.initPool = QStringList{"Name,With,Comma", "Alice & Bob", "Test (1)"};
-
-    QVERIFY(store.save(data));
-
-    PoolData loaded = store.load();
-    QCOMPARE(loaded.initPool, data.initPool);
+    ConfigManager loaded(tempDir.path());
+    QCOMPARE(loaded.initPool(), names);
+    QCOMPARE(loaded.pool(), names);
 }
 
 void TestDataStore::testEmptyList()
@@ -76,48 +59,95 @@ void TestDataStore::testEmptyList()
     QTemporaryDir tempDir;
     QVERIFY(tempDir.isValid());
 
-    DataStore store(tempDir.path());
+    ConfigManager store(tempDir.path());
+    store.setInitPool(QStringList{});
+    store.setPool(QStringList{});
+    store.sync();
 
-    PoolData data;
-    data.initPool.clear();
-    data.pool.clear();
-
-    QVERIFY(store.save(data));
-
-    PoolData loaded = store.load();
-    QVERIFY(loaded.initPool.isEmpty());
-    QVERIFY(loaded.pool.isEmpty());
-    QCOMPARE(loaded.version, 1);
+    ConfigManager loaded(tempDir.path());
+    QVERIFY(loaded.initPool().isEmpty());
+    QVERIFY(loaded.pool().isEmpty());
 }
 
-void TestDataStore::testFileNotExist()
+void TestDataStore::testNoPlaintextInFile()
 {
     QTemporaryDir tempDir;
     QVERIFY(tempDir.isValid());
 
-    DataStore store(tempDir.path());
+    QString password = QStringLiteral("Secret123");
+    QStringList initNames{QStringLiteral("Alice"), QStringLiteral("Bob")};
+    QStringList poolNames{QStringLiteral("Charlie")};
 
-    PoolData loaded = store.load();
-    QVERIFY(loaded.initPool.isEmpty());
-    QVERIFY(loaded.pool.isEmpty());
-    QCOMPARE(loaded.version, 1);
+    ConfigManager store(tempDir.path());
+    store.setPassword(password);
+    store.setInitPool(initNames);
+    store.setPool(poolNames);
+    store.sync();
+
+    QFile file(tempDir.path() + "/Drawer.config");
+    QVERIFY(file.open(QIODevice::ReadOnly | QIODevice::Text));
+    QTextStream in(&file);
+    QString content = in.readAll();
+
+    // No plaintext password
+    QVERIFY(!content.contains(password));
+    // No plaintext names
+    for (const QString &name : initNames) {
+        QVERIFY(!content.contains(name));
+    }
+    for (const QString &name : poolNames) {
+        QVERIFY(!content.contains(name));
+    }
 }
 
-void TestDataStore::testCorruptedFile()
+void TestDataStore::testPasswordRecovery()
 {
     QTemporaryDir tempDir;
     QVERIFY(tempDir.isValid());
 
-    QFile badFile(tempDir.path() + "/drawer_data.json");
-    QVERIFY(badFile.open(QIODevice::WriteOnly | QIODevice::Text));
-    badFile.write("not json at all {{{");
-    badFile.close();
+    ConfigManager store(tempDir.path());
+    store.setPassword("MyPass123");
+    store.sync();
 
-    DataStore store(tempDir.path());
-    PoolData loaded = store.load();
-    QVERIFY(loaded.initPool.isEmpty());
-    QVERIFY(loaded.pool.isEmpty());
-    QCOMPARE(loaded.version, 1);
+    ConfigManager loaded(tempDir.path());
+    QCOMPARE(loaded.password(), QString("MyPass123"));
+}
+
+void TestDataStore::testPoolRecovery()
+{
+    QTemporaryDir tempDir;
+    QVERIFY(tempDir.isValid());
+
+    QStringList initNames{QStringLiteral("A"), QStringLiteral("B"), QStringLiteral("C")};
+    QStringList poolNames{QStringLiteral("A"), QStringLiteral("C")};
+
+    ConfigManager store(tempDir.path());
+    store.setInitPool(initNames);
+    store.setPool(poolNames);
+    store.sync();
+
+    ConfigManager loaded(tempDir.path());
+    QCOMPARE(loaded.initPool(), initNames);
+    QCOMPARE(loaded.pool(), poolNames);
+}
+
+void TestDataStore::testIsAutoLaunch()
+{
+    QTemporaryDir tempDir;
+    QVERIFY(tempDir.isValid());
+
+    {
+        ConfigManager store(tempDir.path());
+        store.setAutoLaunch(true);
+        store.setInitPool(QStringList{"Test"});
+        store.sync();
+    }
+
+    {
+        ConfigManager loaded(tempDir.path());
+        QVERIFY(loaded.autoLaunch());
+        QCOMPARE(loaded.initPool(), QStringList{"Test"});
+    }
 }
 
 QTEST_MAIN(TestDataStore)

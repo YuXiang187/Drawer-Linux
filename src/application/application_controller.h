@@ -6,7 +6,6 @@
 
 class NamePool;
 class ConfigManager;
-class DataStore;
 class SingleInstance;
 class AutoLaunch;
 class DrawWindow;
@@ -36,7 +35,6 @@ public slots:
 private:
     std::unique_ptr<NamePool> m_namePool;
     std::unique_ptr<ConfigManager> m_config;
-    std::unique_ptr<DataStore> m_dataStore;
     std::unique_ptr<SingleInstance> m_singleInstance;
     std::unique_ptr<AutoLaunch> m_autoLaunch;
     std::unique_ptr<DrawWindow> m_drawWindow;

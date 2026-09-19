@@ -1,9 +1,7 @@
 #pragma once
 
 #include <QString>
-#include <memory>
-
-class QSettings;
+#include <QStringList>
 
 class ConfigManager
 {
@@ -19,8 +17,20 @@ public:
     QString password() const;
     void setPassword(const QString &password);
 
+    QStringList initPool() const;
+    void setInitPool(const QStringList &names);
+
+    QStringList pool() const;
+    void setPool(const QStringList &names);
+
     void sync();
 
 private:
-    std::unique_ptr<QSettings> m_settings;
+    void loadFromFile();
+
+    QString m_filePath;
+    bool m_autoLaunch = false;
+    QString m_password;
+    QStringList m_initPool;
+    QStringList m_pool;
 };

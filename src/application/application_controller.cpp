@@ -1,7 +1,6 @@
 #include "application_controller.h"
 #include "core/name_pool.h"
 #include "data/config_manager.h"
-#include "data/data_store.h"
 #include "data/legacy_migrator.h"
 #include "platform/single_instance.h"
 #include "platform/auto_launch.h"
@@ -16,7 +15,6 @@ ApplicationController::ApplicationController(QObject *parent)
     : QObject(parent)
     , m_namePool(std::make_unique<NamePool>())
     , m_config(std::make_unique<ConfigManager>())
-    , m_dataStore(std::make_unique<DataStore>())
     , m_singleInstance(std::make_unique<SingleInstance>())
     , m_autoLaunch(std::make_unique<AutoLaunch>())
     , m_drawWindow(std::make_unique<DrawWindow>())
@@ -36,26 +34,34 @@ bool ApplicationController::init()
         return false;
     }
 
-    PoolData data = m_dataStore->load();
-    if (data.initPool.isEmpty()) {
+    QStringList initNames = m_config->initPool();
+    if (initNames.isEmpty()) {
         const QString legacyPath = QDir(QCoreApplication::applicationDirPath()).filePath("Drawer.config");
         if (QFile::exists(legacyPath)) {
             LegacyMigrator migrator;
             const LegacyData legacy = migrator.migrate(legacyPath);
             if (legacy.valid && !legacy.initPool.isEmpty()) {
-                data.initPool = legacy.initPool;
-                data.pool = legacy.pool;
-                m_dataStore->save(data);
+                initNames = legacy.initPool;
+                m_config->setInitPool(legacy.initPool);
+                m_config->setPool(legacy.pool);
+                m_config->sync();
             }
             if (legacy.valid && !legacy.password.isEmpty()) {
                 m_config->setPassword(legacy.password);
                 m_config->sync();
             }
         }
+
+        if (initNames.isEmpty()) {
+            initNames = QStringList{"Item1", "Item2", "Item3", "Item4", "Item5"};
+            m_config->setInitPool(initNames);
+            m_config->setPool(initNames);
+            m_config->sync();
+        }
     }
 
-    if (!data.initPool.isEmpty()) {
-        m_namePool->setNames(data.initPool);
+    if (!initNames.isEmpty()) {
+        m_namePool->setNames(initNames);
     }
 
     return true;
@@ -88,10 +94,9 @@ void ApplicationController::setNames(const QStringList &names)
 {
     m_namePool->setNames(names);
 
-    PoolData data;
-    data.initPool = names;
-    data.pool = names;
-    m_dataStore->save(data);
+    m_config->setInitPool(names);
+    m_config->setPool(names);
+    m_config->sync();
 }
 
 void ApplicationController::triggerDraw()
@@ -104,10 +109,9 @@ void ApplicationController::triggerDraw()
 
     m_drawWindow->showName(result);
 
-    PoolData data;
-    data.initPool = m_namePool->names();
-    data.pool = m_namePool->remainingNames();
-    m_dataStore->save(data);
+    m_config->setInitPool(m_namePool->names());
+    m_config->setPool(m_namePool->remainingNames());
+    m_config->sync();
 }
 
 void ApplicationController::setAutoLaunch(bool enabled)

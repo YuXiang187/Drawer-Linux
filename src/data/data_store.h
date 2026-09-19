@@ -2,6 +2,7 @@
 
 #include <QStringList>
 
+// Deprecated: JSON storage replaced by ConfigManager writing Drawer.config.
 struct PoolData
 {
     int version = 1;
@@ -18,6 +19,5 @@ public:
     PoolData load() const;
 
 private:
-    QString filePath() const;
     QString m_overridePath;
 };

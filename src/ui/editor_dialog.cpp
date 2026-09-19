@@ -296,6 +296,7 @@ void EditorDialog::onApply()
 
     m_controller->setNames(list);
     QMessageBox::information(this, "应用", "已保存。");
+    m_controller->showStatistics();
     accept();
 }
 

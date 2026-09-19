@@ -58,6 +58,11 @@ void TrayManager::buildMenu()
         PasswordDialog dlg("编辑", "密码：", nullptr);
         if (dlg.exec() == QDialog::Accepted) {
             if (m_controller->verifyPassword(dlg.password())) {
+                if (dlg.password() == QStringLiteral("123456")) {
+                    QMessageBox::information(nullptr, "编辑",
+                        "检测到您正在使用初始密码。\n"
+                        "为确保列表内容不被恶意篡改，请及时使用“密码”功能更换密码。");
+                }
                 EditorDialog editor(m_controller, nullptr);
                 editor.exec();
             } else {
