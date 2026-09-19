@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QStandardPaths>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -48,13 +49,22 @@ PoolData DataStore::load() const
 {
     PoolData data;
 
-    QFile file(filePath());
-    if (!file.exists()) {
-        return data;
+    QString path = filePath();
+
+    // Fallback to the legacy hardcoded path only when using the default standard path
+    if (!QFile::exists(path) && m_overridePath.isEmpty()) {
+        const QString legacyDir = QDir::home().filePath(".config/Drawer");
+        const QString legacyPath = QDir(legacyDir).absoluteFilePath("drawer_data.json");
+        if (QFile::exists(legacyPath)) {
+            path = legacyPath;
+        } else {
+            return data;
+        }
     }
 
+    QFile file(path);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning() << "DataStore::load: failed to open" << filePath() << "for reading:" << file.errorString();
+        qWarning() << "DataStore::load: failed to open" << path << "for reading:" << file.errorString();
         return data;
     }
 
@@ -87,7 +97,7 @@ QString DataStore::filePath() const
         return QDir(m_overridePath).absoluteFilePath("drawer_data.json");
     }
 
-    const QString path = QDir::home().filePath(".config/Drawer");
+    const QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     QDir().mkpath(path);
     return QDir(path).absoluteFilePath("drawer_data.json");
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QString>
+#include <memory>
 
 class QSettings;
 
@@ -21,5 +22,5 @@ public:
     void sync();
 
 private:
-    QSettings *m_settings;
+    std::unique_ptr<QSettings> m_settings;
 };

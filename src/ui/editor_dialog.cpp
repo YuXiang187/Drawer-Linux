@@ -27,7 +27,7 @@ EditorDialog::EditorDialog(ApplicationController *controller, QWidget *parent)
     , m_findIndex(0)
 {
     setWindowIcon(QApplication::style()->standardIcon(QStyle::SP_MediaPlay));
-    setWindowTitle("YuXiang Drawer - 编辑");
+    setWindowTitle("YuXiang Drawer");
     resize(800, 500);
 
     auto *mainLayout = new QVBoxLayout(this);

@@ -17,22 +17,18 @@ ApplicationController::ApplicationController(QObject *parent)
     , m_namePool(std::make_unique<NamePool>())
     , m_config(std::make_unique<ConfigManager>())
     , m_dataStore(std::make_unique<DataStore>())
-    , m_singleInstance(new SingleInstance)
+    , m_singleInstance(std::make_unique<SingleInstance>())
     , m_autoLaunch(std::make_unique<AutoLaunch>())
-    , m_drawWindow(new DrawWindow)
+    , m_drawWindow(std::make_unique<DrawWindow>())
 {
-    connect(m_singleInstance, &SingleInstance::commandReceived, this, [this](const QString &cmd) {
+    connect(m_singleInstance.get(), &SingleInstance::commandReceived, this, [this](const QString &cmd) {
         if (cmd == "trigger") {
             triggerDraw();
         }
     });
 }
 
-ApplicationController::~ApplicationController()
-{
-    delete m_drawWindow;
-    delete m_singleInstance;
-}
+ApplicationController::~ApplicationController() = default;
 
 bool ApplicationController::init()
 {

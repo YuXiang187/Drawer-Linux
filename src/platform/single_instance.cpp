@@ -1,4 +1,5 @@
 #include "single_instance.h"
+#include <QDebug>
 #include <QLockFile>
 #include <QLocalServer>
 #include <QLocalSocket>
@@ -55,21 +56,29 @@ bool SingleInstance::tryLock()
         const QString serverName = ipcServerName();
         QLocalServer::removeServer(serverName);
         m_server = new QLocalServer(this);
-        if (m_server->listen(serverName)) {
-            connect(m_server, &QLocalServer::newConnection, this, [this]() {
-                QLocalSocket *socket = m_server->nextPendingConnection();
-                connect(socket, &QLocalSocket::readyRead, this, [this, socket]() {
-                    QByteArray data = socket->readAll();
-                    QString cmd = QString::fromUtf8(data).trimmed();
-                    if (!cmd.isEmpty()) {
-                        emit commandReceived(cmd);
-                    }
-                    socket->write("ok\n");
-                    socket->flush();
-                });
-                connect(socket, &QLocalSocket::disconnected, socket, &QLocalSocket::deleteLater);
-            });
+        if (!m_server->listen(serverName)) {
+            qWarning() << "SingleInstance::tryLock: QLocalServer::listen() failed:" << m_server->errorString();
+            delete m_server;
+            m_server = nullptr;
+            delete m_lockFile;
+            m_lockFile = nullptr;
+            m_locked = false;
+            return false;
         }
+
+        connect(m_server, &QLocalServer::newConnection, this, [this]() {
+            QLocalSocket *socket = m_server->nextPendingConnection();
+            connect(socket, &QLocalSocket::readyRead, this, [this, socket]() {
+                QByteArray data = socket->readAll();
+                QString cmd = QString::fromUtf8(data).trimmed();
+                if (!cmd.isEmpty()) {
+                    emit commandReceived(cmd);
+                }
+                socket->write("ok\n");
+                socket->flush();
+            });
+            connect(socket, &QLocalSocket::disconnected, socket, &QLocalSocket::deleteLater);
+        });
         return true;
     }
 

@@ -8,18 +8,25 @@ ConfigManager::ConfigManager(const QString &overridePath)
 {
     QString dirPath = overridePath;
     if (dirPath.isEmpty()) {
-        dirPath = QDir::home().filePath(".config/Drawer");
+        dirPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
         QDir().mkpath(dirPath);
+
+        // Migrate legacy config from the old hardcoded path if the new one does not exist
+        const QString iniFile = QDir(dirPath).absoluteFilePath("drawer.ini");
+        if (!QFile::exists(iniFile)) {
+            const QString legacyDir = QDir::home().filePath(".config/Drawer");
+            const QString legacyIni = QDir(legacyDir).absoluteFilePath("drawer.ini");
+            if (QFile::exists(legacyIni)) {
+                QFile::copy(legacyIni, iniFile);
+            }
+        }
     }
 
     const QString iniFile = QDir(dirPath).absoluteFilePath("drawer.ini");
-    m_settings = new QSettings(iniFile, QSettings::IniFormat);
+    m_settings = std::make_unique<QSettings>(iniFile, QSettings::IniFormat);
 }
 
-ConfigManager::~ConfigManager()
-{
-    delete m_settings;
-}
+ConfigManager::~ConfigManager() = default;
 
 int ConfigManager::version() const
 {
