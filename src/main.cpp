@@ -11,6 +11,7 @@
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
+    app.setQuitOnLastWindowClosed(false);
     app.setApplicationName("Drawer");
     app.setOrganizationName("YuXiang");
     app.setApplicationVersion("1.0.0");
@@ -43,8 +44,13 @@ int main(int argc, char *argv[])
 
     if (!QSystemTrayIcon::isSystemTrayAvailable()) {
         QMessageBox::critical(nullptr, "Drawer",
-            "当前桌面环境不支持系统托盘。\n"
-            "请启用 AppIndicator 扩展，或者使用支持系统托盘的桌面环境。");
+            "当前桌面环境不支持系统托盘。\n\n"
+            "如果您使用 GNOME 桌面，请安装并启用 AppIndicator 扩展：\n\n"
+            "Fedora:\n"
+            "sudo dnf install gnome-shell-extension-appindicator\n\n"
+            "Debian/Ubuntu:\n"
+            "sudo apt install gnome-shell-extension-appindicator\n\n"
+            "启用扩展后请重新登录桌面环境。");
         return 1;
     }
 

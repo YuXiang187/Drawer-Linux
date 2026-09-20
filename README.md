@@ -4,6 +4,10 @@
 
 运行环境：Debian 13、KDE Plasma 6、Wayland
 
+## 构建
+
+以Debian 13环境为例
+
 安装构建依赖：
 
 ```bash
@@ -24,7 +28,6 @@ ctest --test-dir build-debug --output-on-failure
 cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release
 cmake --build build-release -j$(nproc)
 ctest --test-dir build-release --output-on-failure
-./build-release/drawer
 ```
 
 命令行参数：
@@ -33,4 +36,21 @@ ctest --test-dir build-release --output-on-failure
 ./drawer --trigger    # 触发抽取
 ./drawer --version    # 显示版本
 ./drawer --help       # 显示帮助
+```
+
+## GNOME桌面运行
+
+GNOME桌面依赖`gnome-shell-extension-appindicator`运行
+
+安装之后启用拓展：`gnome-extensions enable appindicatorsupport@rgcjonas.gmail.com`
+
+检查是否启用：`gnome-extensions list --enabled`
+
+## 卸载后清理
+
+清理残留配置文件：
+
+```bash
+rm -r ~/.config/YuXiang/
+rm -r ~/.config/autostart/drawer.desktop
 ```

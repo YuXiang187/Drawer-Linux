@@ -49,7 +49,7 @@ EditorDialog::EditorDialog(ApplicationController *controller, QWidget *parent)
     toolBar->addSeparator();
 
     QAction *actClear = toolBar->addAction("清空");
-    QAction *actPassword = toolBar->addAction("修改密码");
+    QAction *actPassword = toolBar->addAction("密码");
     toolBar->addSeparator();
 
     QAction *actApply = toolBar->addAction("应用");
