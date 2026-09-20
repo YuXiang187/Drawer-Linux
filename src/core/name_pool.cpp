@@ -1,14 +1,9 @@
 #include "name_pool.h"
 #include "random_engine.h"
 
-NamePool::NamePool()
-    : m_random(new RandomEngine)
-{}
+NamePool::NamePool() = default;
 
-NamePool::~NamePool()
-{
-    delete m_random;
-}
+NamePool::~NamePool() = default;
 
 void NamePool::setNames(const QStringList &names)
 {
@@ -45,7 +40,7 @@ QString NamePool::draw()
         reset();
     }
 
-    const int index = m_random->nextInt(0, m_pool.size() - 1);
+    const int index = m_random.nextInt(0, m_pool.size() - 1);
     const QString result = m_pool.takeAt(index);
     return result;
 }

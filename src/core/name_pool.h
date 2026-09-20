@@ -1,8 +1,8 @@
 #pragma once
 
-#include <QStringList>
+#include "random_engine.h"
 
-class RandomEngine;
+#include <QStringList>
 
 class NamePool
 {
@@ -29,5 +29,5 @@ public:
 private:
     QStringList m_initPool;
     QStringList m_pool;
-    RandomEngine *m_random;
+    RandomEngine m_random;
 };
