@@ -2,6 +2,7 @@
 #include <QDebug>
 #include <QMessageBox>
 #include <QStyle>
+#include <QSystemTrayIcon>
 #include "cli/cli_parser.h"
 #include "application/application_controller.h"
 #include "platform/single_instance.h"
@@ -37,6 +38,13 @@ int main(int argc, char *argv[])
             return 0;
         }
         qDebug() << "No running instance found.";
+        return 1;
+    }
+
+    if (!QSystemTrayIcon::isSystemTrayAvailable()) {
+        QMessageBox::critical(nullptr, "Drawer",
+            "当前桌面环境不支持系统托盘。\n"
+            "请启用 AppIndicator 扩展，或者使用支持系统托盘的桌面环境。");
         return 1;
     }
 

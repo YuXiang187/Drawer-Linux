@@ -30,9 +30,7 @@ ctest --test-dir build-release --output-on-failure
 命令行参数：
 
 ```bash
-./drawer --trigger    # 触发一次抽取
-./drawer --edit       # 打开编辑器
-./drawer --stats      # 显示统计
+./drawer --trigger    # 触发抽取
 ./drawer --version    # 显示版本
 ./drawer --help       # 显示帮助
 ```

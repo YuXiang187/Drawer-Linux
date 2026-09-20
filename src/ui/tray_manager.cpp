@@ -47,7 +47,7 @@ void TrayManager::buildMenu()
     QAction *actionHotkey = m_menu->addAction("热键");
     connect(actionHotkey, &QAction::triggered, this, [this]() {
         QMessageBox::information(nullptr, "热键",
-            "如需绑定外部热键，请在 KDE 系统设置 → 快捷键 中，\n"
+            "如需绑定外部热键，请在 系统设置 → 快捷键 中，\n"
             "将命令绑定到：\n\n"
             "  drawer --trigger");
     });
