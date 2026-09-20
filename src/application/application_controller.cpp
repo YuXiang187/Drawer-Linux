@@ -1,14 +1,10 @@
 #include "application_controller.h"
 #include "core/name_pool.h"
 #include "data/config_manager.h"
-#include "data/legacy_migrator.h"
 #include "platform/single_instance.h"
 #include "platform/auto_launch.h"
 #include "ui/draw_window.h"
 
-#include <QCoreApplication>
-#include <QDir>
-#include <QFile>
 #include <QMessageBox>
 
 ApplicationController::ApplicationController(QObject *parent)
@@ -35,27 +31,9 @@ bool ApplicationController::init()
     }
 
     if (!m_config->fileExists()) {
-        bool migrated = false;
-        const QString legacyPath = QDir(QCoreApplication::applicationDirPath()).filePath("Drawer.config");
-        if (QFile::exists(legacyPath)) {
-            LegacyMigrator migrator;
-            const LegacyData legacy = migrator.migrate(legacyPath);
-            if (legacy.valid) {
-                m_config->setInitPool(legacy.initPool);
-                m_config->setPool(legacy.pool);
-                m_config->setAutoLaunch(legacy.isAutoLaunch);
-                if (!legacy.password.isEmpty()) {
-                    m_config->setPassword(legacy.password);
-                }
-                migrated = true;
-            }
-        }
-
-        if (!migrated) {
-            const QStringList defaultNames{"Item1", "Item2", "Item3", "Item4", "Item5"};
-            m_config->setInitPool(defaultNames);
-            m_config->setPool(defaultNames);
-        }
+        const QStringList defaultNames{"Item1", "Item2", "Item3", "Item4", "Item5"};
+        m_config->setInitPool(defaultNames);
+        m_config->setPool(defaultNames);
 
         m_config->sync();
     }

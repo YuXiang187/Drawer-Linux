@@ -3,8 +3,6 @@
 #include <QFile>
 #include <QTextStream>
 #include "data/config_manager.h"
-#include "data/encryptor.h"
-#include "data/legacy_migrator.h"
 
 class TestConfigManager : public QObject
 {
@@ -19,7 +17,6 @@ private slots:
     void testAutoLaunchPersistence();
     void testConfigFileExistence();
     void testEmptyPoolIsValidState();
-    void testMigratedLegacyDataWrittenToConfigFile();
 };
 
 void TestConfigManager::testDefaults()
@@ -177,51 +174,6 @@ void TestConfigManager::testEmptyPoolIsValidState()
     QVERIFY(cm.initPool().isEmpty());
     QVERIFY(cm.pool().isEmpty());
     QCOMPARE(cm.password(), QString("123456"));
-}
-
-void TestConfigManager::testMigratedLegacyDataWrittenToConfigFile()
-{
-    QTemporaryDir tempDir;
-    QVERIFY(tempDir.isValid());
-
-    Encryptor encryptor;
-    QFile legacyFile(tempDir.path() + "/legacy.config");
-    QVERIFY(legacyFile.open(QIODevice::WriteOnly | QIODevice::Text));
-    QTextStream out(&legacyFile);
-    out << "Mode:1\n";
-    out << "isAutoLaunch:true\n";
-    out << "Hotkey:Ctrl+Shift+H\n";
-    out << "Key:" << encryptor.encrypt("secret") << "\n";
-    out << "initPool:" << encryptor.encrypt("Alice,Bob,Carol") << "\n";
-    out << "pool:" << encryptor.encrypt("Alice,Carol") << "\n";
-    legacyFile.close();
-
-    LegacyMigrator migrator;
-    const LegacyData legacy = migrator.migrate(legacyFile.fileName());
-    QVERIFY(legacy.valid);
-
-    ConfigManager cm(tempDir.path());
-    QVERIFY(!cm.fileExists());
-    cm.setInitPool(legacy.initPool);
-    cm.setPool(legacy.pool);
-    cm.setAutoLaunch(legacy.isAutoLaunch);
-    cm.setPassword(legacy.password);
-    cm.sync();
-
-    ConfigManager reloaded(tempDir.path());
-    QCOMPARE(reloaded.initPool(), QStringList({"Alice", "Bob", "Carol"}));
-    QCOMPARE(reloaded.pool(), QStringList({"Alice", "Carol"}));
-    QCOMPARE(reloaded.autoLaunch(), true);
-    QCOMPARE(reloaded.password(), QString("secret"));
-
-    QFile configFile(tempDir.path() + "/Drawer.config");
-    QVERIFY(configFile.open(QIODevice::ReadOnly | QIODevice::Text));
-    QTextStream in(&configFile);
-    const QString content = in.readAll();
-    QVERIFY(content.contains("Mode:0"));
-    QVERIFY(content.contains("Hotkey:F8"));
-    QVERIFY(content.contains("isAutoLaunch:true"));
-    QVERIFY(!content.contains("Ctrl+Shift+H"));
 }
 
 QTEST_MAIN(TestConfigManager)

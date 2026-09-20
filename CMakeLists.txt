@@ -16,7 +16,6 @@ set(SOURCES
     src/core/random_engine.cpp
     src/data/config_manager.cpp
     src/data/encryptor.cpp
-    src/data/legacy_migrator.cpp
     src/platform/single_instance.cpp
     src/platform/auto_launch.cpp
     src/application/application_controller.cpp
@@ -32,7 +31,6 @@ set(HEADERS
     src/core/random_engine.h
     src/data/config_manager.h
     src/data/encryptor.h
-    src/data/legacy_migrator.h
     src/platform/single_instance.h
     src/platform/auto_launch.h
     src/application/application_controller.h
