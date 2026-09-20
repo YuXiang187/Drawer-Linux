@@ -1,0 +1,5 @@
+# CMake build trees (build-debug, build-release, ...)
+/build*/
+
+# CPack staging directories
+_CPack_Packages/

@@ -62,5 +62,60 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 qt_finalize_executable(${PROJECT_NAME})
 
+# ---------------------------------------------------------------------------
+# Install rules
+# ---------------------------------------------------------------------------
+include(GNUInstallDirs)
+
+install(TARGETS ${PROJECT_NAME}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+if(UNIX AND NOT APPLE)
+    # Desktop entry -> /usr/share/applications/drawer.desktop
+    install(FILES packaging/drawer.desktop
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications
+    )
+endif()
+
+# ---------------------------------------------------------------------------
+# CPack packaging (.deb / .rpm)
+# ---------------------------------------------------------------------------
+if(UNIX AND NOT APPLE)
+    set(CPACK_GENERATOR "DEB;RPM")
+
+    set(CPACK_PACKAGE_NAME "drawer")
+    set(CPACK_PACKAGE_VENDOR "YuXiang")
+    set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Name Random Drawer")
+    string(CONCAT CPACK_PACKAGE_DESCRIPTION
+        "YuXiang Drawer is a small tray application that draws a random name "
+        "from a user managed name pool. The pool is stored encrypted and can "
+        "be maintained from the tray icon menu.")
+    set(CPACK_PACKAGE_CONTACT "YuXiang187")
+    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
+    set(CPACK_PACKAGE_EXECUTABLES "drawer" "YuXiang Drawer")
+    set(CPACK_STRIP_FILES TRUE)
+    set(CPACK_VERBATIM_VARIABLES TRUE)
+
+    # Packages always install below /usr, independent of CMAKE_INSTALL_PREFIX
+    set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
+
+    # --- .deb ---------------------------------------------------------------
+    set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+    set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
+    set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+    # Derive Depends: from the ELF objects (libqt6*, libssl, libc, ...)
+    set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+
+    # --- .rpm ---------------------------------------------------------------
+    set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
+    set(CPACK_RPM_PACKAGE_LICENSE "GPL-3.0-or-later")
+    set(CPACK_RPM_PACKAGE_GROUP "Applications/Utility")
+    set(CPACK_RPM_PACKAGE_DESCRIPTION "${CPACK_PACKAGE_DESCRIPTION}")
+
+    include(CPack)
+endif()
+
 enable_testing()
 add_subdirectory(tests)

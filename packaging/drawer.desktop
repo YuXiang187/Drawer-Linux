@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=YuXiang Drawer
+Comment=Name Random Drawer
+Exec=drawer
+Type=Application
+Terminal=false
+Icon=media-playback-start
+Categories=Utility;
