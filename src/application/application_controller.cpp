@@ -34,35 +34,33 @@ bool ApplicationController::init()
         return false;
     }
 
-    QStringList initNames = m_config->initPool();
-    if (initNames.isEmpty()) {
+    if (!m_config->fileExists()) {
+        bool migrated = false;
         const QString legacyPath = QDir(QCoreApplication::applicationDirPath()).filePath("Drawer.config");
         if (QFile::exists(legacyPath)) {
             LegacyMigrator migrator;
             const LegacyData legacy = migrator.migrate(legacyPath);
-            if (legacy.valid && !legacy.initPool.isEmpty()) {
-                initNames = legacy.initPool;
+            if (legacy.valid) {
                 m_config->setInitPool(legacy.initPool);
                 m_config->setPool(legacy.pool);
-                m_config->sync();
-            }
-            if (legacy.valid && !legacy.password.isEmpty()) {
-                m_config->setPassword(legacy.password);
-                m_config->sync();
+                m_config->setAutoLaunch(legacy.isAutoLaunch);
+                if (!legacy.password.isEmpty()) {
+                    m_config->setPassword(legacy.password);
+                }
+                migrated = true;
             }
         }
 
-        if (initNames.isEmpty()) {
-            initNames = QStringList{"Item1", "Item2", "Item3", "Item4", "Item5"};
-            m_config->setInitPool(initNames);
-            m_config->setPool(initNames);
-            m_config->sync();
+        if (!migrated) {
+            const QStringList defaultNames{"Item1", "Item2", "Item3", "Item4", "Item5"};
+            m_config->setInitPool(defaultNames);
+            m_config->setPool(defaultNames);
         }
+
+        m_config->sync();
     }
 
-    if (!initNames.isEmpty()) {
-        m_namePool->setNames(initNames);
-    }
+    m_namePool->setState(m_config->initPool(), m_config->pool());
 
     return true;
 }

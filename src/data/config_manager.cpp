@@ -71,6 +71,11 @@ int ConfigManager::version() const
     return 1;
 }
 
+bool ConfigManager::fileExists() const
+{
+    return QFile::exists(m_filePath);
+}
+
 bool ConfigManager::autoLaunch() const
 {
     return m_autoLaunch;

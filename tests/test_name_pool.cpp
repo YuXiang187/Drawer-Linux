@@ -1,6 +1,8 @@
 #include <QTest>
+#include <QTemporaryDir>
 #include <QStringList>
 #include "core/name_pool.h"
+#include "data/config_manager.h"
 
 class TestNamePool : public QObject
 {
@@ -9,6 +11,7 @@ class TestNamePool : public QObject
 private slots:
     void initTestCase();
     void testSetNames();
+    void testSetState();
     void testAddName();
     void testRemoveName();
     void testDraw();
@@ -17,6 +20,8 @@ private slots:
     void testEmptyPool();
     void testSingleName();
     void testDuplicateNames();
+    void testDrawnNamesRemainRemovedAfterRestart();
+    void testEmptyPoolStateAfterRestart();
 };
 
 void TestNamePool::initTestCase()
@@ -34,6 +39,18 @@ void TestNamePool::testSetNames()
     QCOMPARE(pool.remainingSize(), 3);
     QCOMPARE(pool.isEmpty(), false);
     QCOMPARE(pool.names(), names);
+}
+
+void TestNamePool::testSetState()
+{
+    NamePool pool;
+    pool.setState({"Alice", "Bob", "Carol"}, {"Alice", "Carol"});
+
+    QCOMPARE(pool.names(), QStringList({"Alice", "Bob", "Carol"}));
+    QCOMPARE(pool.remainingNames(), QStringList({"Alice", "Carol"}));
+    QCOMPARE(pool.size(), 3);
+    QCOMPARE(pool.remainingSize(), 2);
+    QVERIFY(!pool.remainingNames().contains("Bob"));
 }
 
 void TestNamePool::testAddName()
@@ -147,6 +164,65 @@ void TestNamePool::testDuplicateNames()
     QVERIFY(!r3.isEmpty());
 
     QCOMPARE(pool.remainingSize(), 0);
+}
+
+void TestNamePool::testDrawnNamesRemainRemovedAfterRestart()
+{
+    QTemporaryDir tempDir;
+    QVERIFY(tempDir.isValid());
+
+    QString drawn;
+    {
+        ConfigManager config(tempDir.path());
+        config.setInitPool({"Alice", "Bob", "Carol"});
+        config.setPool({"Alice", "Bob", "Carol"});
+        config.sync();
+
+        NamePool pool;
+        pool.setState(config.initPool(), config.pool());
+        drawn = pool.draw();
+        QVERIFY(!drawn.isEmpty());
+
+        config.setInitPool(pool.names());
+        config.setPool(pool.remainingNames());
+        config.sync();
+    }
+
+    {
+        ConfigManager config(tempDir.path());
+        QVERIFY(config.fileExists());
+
+        NamePool pool;
+        pool.setState(config.initPool(), config.pool());
+
+        QCOMPARE(pool.names(), QStringList({"Alice", "Bob", "Carol"}));
+        QCOMPARE(pool.remainingSize(), 2);
+        QVERIFY(!pool.remainingNames().contains(drawn));
+    }
+}
+
+void TestNamePool::testEmptyPoolStateAfterRestart()
+{
+    QTemporaryDir tempDir;
+    QVERIFY(tempDir.isValid());
+
+    {
+        ConfigManager config(tempDir.path());
+        config.setInitPool({});
+        config.setPool({});
+        config.sync();
+    }
+
+    ConfigManager config(tempDir.path());
+    QVERIFY(config.fileExists());
+    QVERIFY(config.initPool().isEmpty());
+    QVERIFY(config.pool().isEmpty());
+
+    NamePool pool;
+    pool.setState(config.initPool(), config.pool());
+    QVERIFY(pool.isEmpty());
+    QCOMPARE(pool.remainingSize(), 0);
+    QCOMPARE(pool.draw(), QString());
 }
 
 QTEST_MAIN(TestNamePool)

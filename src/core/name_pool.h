@@ -11,6 +11,7 @@ public:
     ~NamePool();
 
     void setNames(const QStringList &names);
+    void setState(const QStringList &initPool, const QStringList &pool);
     void addName(const QString &name);
     void removeName(const QString &name);
 

@@ -16,6 +16,12 @@ void NamePool::setNames(const QStringList &names)
     m_pool = m_initPool;
 }
 
+void NamePool::setState(const QStringList &initPool, const QStringList &pool)
+{
+    m_initPool = initPool;
+    m_pool = pool;
+}
+
 void NamePool::addName(const QString &name)
 {
     if (name.isEmpty())

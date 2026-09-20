@@ -11,6 +11,8 @@ public:
 
     int version() const;
 
+    bool fileExists() const;
+
     bool autoLaunch() const;
     void setAutoLaunch(bool enabled);
 
