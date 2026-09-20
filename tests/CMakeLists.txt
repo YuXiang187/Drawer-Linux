@@ -7,7 +7,6 @@ set(COMMON_SOURCES
     ../src/core/name_pool.cpp
     ../src/core/random_engine.cpp
     ../src/data/config_manager.cpp
-    ../src/data/data_store.cpp
     ../src/data/encryptor.cpp
     ../src/data/legacy_migrator.cpp
     ../src/platform/single_instance.cpp
@@ -28,11 +27,11 @@ target_include_directories(test_config_manager PRIVATE ../src)
 target_link_libraries(test_config_manager PRIVATE ${COMMON_LINKS})
 add_test(NAME ConfigManager COMMAND test_config_manager)
 
-# test_data_store
-add_executable(test_data_store test_data_store.cpp ${COMMON_SOURCES})
-target_include_directories(test_data_store PRIVATE ../src)
-target_link_libraries(test_data_store PRIVATE ${COMMON_LINKS})
-add_test(NAME DataStore COMMAND test_data_store)
+# test_random_engine
+add_executable(test_random_engine test_random_engine.cpp ${COMMON_SOURCES})
+target_include_directories(test_random_engine PRIVATE ../src)
+target_link_libraries(test_random_engine PRIVATE ${COMMON_LINKS})
+add_test(NAME RandomEngine COMMAND test_random_engine)
 
 # test_encryptor
 add_executable(test_encryptor test_encryptor.cpp ${COMMON_SOURCES})

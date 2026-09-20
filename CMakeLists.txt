@@ -15,7 +15,6 @@ set(SOURCES
     src/core/name_pool.cpp
     src/core/random_engine.cpp
     src/data/config_manager.cpp
-    src/data/data_store.cpp
     src/data/encryptor.cpp
     src/data/legacy_migrator.cpp
     src/platform/single_instance.cpp
@@ -32,7 +31,6 @@ set(HEADERS
     src/core/name_pool.h
     src/core/random_engine.h
     src/data/config_manager.h
-    src/data/data_store.h
     src/data/encryptor.h
     src/data/legacy_migrator.h
     src/platform/single_instance.h
