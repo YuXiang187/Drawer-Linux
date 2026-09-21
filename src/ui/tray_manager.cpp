@@ -63,15 +63,6 @@ void TrayManager::buildMenu()
     connect(m_actionFloatingWindow, &QAction::toggled,
             m_controller, &ApplicationController::setFloatingWindow);
 
-    // Hotkey
-    QAction *actionHotkey = m_menu->addAction("热键");
-    connect(actionHotkey, &QAction::triggered, this, [this]() {
-        QMessageBox::information(nullptr, "热键",
-            "如需绑定外部热键，请在 系统设置 → 快捷键 中，\n"
-            "将命令绑定到：\n\n"
-            "  drawer --trigger");
-    });
-
     // Edit
     QAction *actionEdit = m_menu->addAction("编辑");
     connect(actionEdit, &QAction::triggered, this, [this]() {
@@ -94,6 +85,21 @@ void TrayManager::buildMenu()
     // Statistics
     QAction *actionStats = m_menu->addAction("统计");
     connect(actionStats, &QAction::triggered, m_controller, &ApplicationController::showStatistics);
+
+    // Hotkey
+    QAction *actionHotkey = m_menu->addAction("帮助");
+    connect(actionHotkey, &QAction::triggered, this, [this]() {
+        QMessageBox::information(nullptr, "帮助",
+            "如需绑定外部热键，请在 系统设置 → 快捷键 中，\n"
+            "将命令绑定到：\n\n"
+            "  drawer --trigger\n\n"
+            "如需让浮窗始终置顶，请按照以下指引操作。\n\n"
+            "KDE桌面置顶：\n"
+            "按下Alt+F3，在弹出的菜单中点击“更多操作” - “置顶”\n\n"
+            "GNOME桌面置顶：\n"
+            "按下Alt+Space，在弹出的菜单中点击“置顶”\n\n"
+            "如需设置浮窗固定位置，请在KWin中添加窗口规则。");
+    });
 
     // About
     QAction *actionAbout = m_menu->addAction("关于");

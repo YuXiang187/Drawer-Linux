@@ -151,7 +151,7 @@ bool ApplicationController::isAutoLaunch() const
 
 void ApplicationController::setFloatingWindow(bool enabled)
 {
-    // the clicked state to Drawer.config (Mode:1 / Mode:0).
+    // clicked state to Drawer.config (Mode:1 / Mode:0).
     saveFloatingWindowState(enabled);
 
     if (m_floatingWindowEnabled == enabled)
@@ -165,9 +165,6 @@ void ApplicationController::setFloatingWindow(bool enabled)
         m_floatingWindow->hide();
 
     emit floatingWindowChanged(enabled);
-
-    if (enabled)
-        showFloatingWindowTip();
 }
 
 bool ApplicationController::isFloatingWindowEnabled() const
@@ -179,16 +176,6 @@ void ApplicationController::saveFloatingWindowState(bool enabled)
 {
     m_config->setFloatingWindow(enabled);
     m_config->sync();
-}
-
-void ApplicationController::showFloatingWindowTip() const
-{
-    QMessageBox::information(nullptr, "浮窗",
-        "如需让浮窗始终置顶在屏幕，请按照以下指引操作。\n\n"
-        "KDE桌面置顶：\n"
-        "按下Alt+F3，在弹出的菜单中点击“更多操作” - “置顶”\n\n"
-        "GNOME桌面置顶：\n"
-        "按下Alt+Space，在弹出的菜单中点击“置顶”");
 }
 
 void ApplicationController::showStatistics()

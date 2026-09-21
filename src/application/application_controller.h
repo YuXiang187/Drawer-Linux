@@ -48,7 +48,6 @@ protected:
 private:
     // Writes the floating window state to Drawer.config as Mode:0 / Mode:1.
     void saveFloatingWindowState(bool enabled);
-    void showFloatingWindowTip() const;
 
     std::unique_ptr<NamePool> m_namePool;
     std::unique_ptr<ConfigManager> m_config;

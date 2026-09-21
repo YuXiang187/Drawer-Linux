@@ -23,16 +23,16 @@ FloatingWindow::FloatingWindow(QWidget *parent)
 {
     setWindowTitle(QStringLiteral("浮窗"));
     setWindowIcon(QApplication::style()->standardIcon(QStyle::SP_MediaPlay));
-    // Showing the window must not steal the focus from the application in use.
-    setAttribute(Qt::WA_ShowWithoutActivating, true);
+    // Keep the window background transparent so only the button is visible.
+    setAttribute(Qt::WA_TranslucentBackground);
     setFixedSize(kWindowSize, kWindowSize);
 
     m_button->setIcon(QApplication::style()->standardIcon(QStyle::SP_MediaPlay));
     m_button->setIconSize(QSize(kIconSize, kIconSize));
-    m_button->setToolTip(QStringLiteral("抽取"));
+    m_button->setFixedSize(kWindowSize, kWindowSize);
+    m_button->setFocusPolicy(Qt::NoFocus);
     m_button->setCursor(Qt::PointingHandCursor);
-    // Focus stays enabled on purpose: clicking the button activates the window,
-    // which is what makes Alt+F4 / Alt+F3 address it.
+    // Handle right-click dragging on the button.
     m_button->installEventFilter(this);
 
     auto *layout = new QVBoxLayout(this);
