@@ -123,7 +123,7 @@ void ApplicationController::triggerDraw()
 {
     const QString result = m_namePool->draw();
     if (result.isEmpty()) {
-        QMessageBox::information(nullptr, "Drawer", "列表为空，请先添加名称。");
+        QMessageBox::information(nullptr, "错误", "列表为空，请先添加名称。");
         return;
     }
 
@@ -136,12 +136,24 @@ void ApplicationController::triggerDraw()
 
 void ApplicationController::setAutoLaunch(bool enabled)
 {
-    if (enabled)
-        m_autoLaunch->enable();
-    else
-        m_autoLaunch->disable();
+    const bool applied = enabled ? m_autoLaunch->enable() : m_autoLaunch->disable();
+
+    if (!applied) {
+        // Do not let the menu item and Drawer.config claim a state that was
+        // not actually applied to ~/.config/autostart.
+        m_config->setAutoLaunch(!enabled);
+        m_config->sync();
+        emit autoLaunchChanged(!enabled);
+
+        QMessageBox::warning(nullptr, "自启",
+            enabled ? "无法写入开机自启配置。\n\n请检查 ~/.config/autostart 目录的写入权限。"
+                    : "无法移除开机自启配置。\n\n请检查 ~/.config/autostart 目录的写入权限。");
+        return;
+    }
+
     m_config->setAutoLaunch(enabled);
     m_config->sync();
+    emit autoLaunchChanged(enabled);
 }
 
 bool ApplicationController::isAutoLaunch() const

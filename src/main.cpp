@@ -15,6 +15,9 @@ int main(int argc, char *argv[])
     app.setApplicationName("Drawer");
     app.setOrganizationName("YuXiang");
     app.setApplicationVersion("1.0.0");
+    // Ties the windows to drawer.desktop so Wayland compositors can show the
+    // right icon and application name.
+    app.setDesktopFileName("drawer");
     app.setWindowIcon(QApplication::style()->standardIcon(QStyle::SP_MediaPlay));
 
     CliParser cli(argc, argv);

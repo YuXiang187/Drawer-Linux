@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QString>
+#include <memory>
 
 class QLockFile;
 class QLocalServer;
@@ -24,8 +25,9 @@ signals:
 
 private:
     QString lockFilePath() const;
+
     QString m_overridePath;
-    QLockFile *m_lockFile;
-    bool m_locked;
-    QLocalServer *m_server;
+    std::unique_ptr<QLockFile> m_lockFile;
+    std::unique_ptr<QLocalServer> m_server;
+    bool m_locked = false;
 };

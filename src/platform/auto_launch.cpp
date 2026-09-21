@@ -39,7 +39,7 @@ bool AutoLaunch::enable()
     QDir().mkpath(dir);
 
     QFile file(path);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
         return false;
     }
 
@@ -47,17 +47,30 @@ bool AutoLaunch::enable()
     out << "[Desktop Entry]\n";
     out << "Name=YuXiang Drawer\n";
     out << "Comment=Name Random Drawer\n";
-    out << "Exec=" << execPath() << "\n";
+    // Quoted: the executable path may contain spaces.
+    out << "Exec=\"" << execPath() << "\"\n";
     out << "Type=Application\n";
     out << "Terminal=false\n";
     out << "Icon=media-playback-start\n";
     out << "Categories=Utility;\n";
-    file.close();
+    out.flush();
 
+    if (out.status() != QTextStream::Ok) {
+        file.close();
+        QFile::remove(path); // do not leave a half written entry behind
+        return false;
+    }
+
+    file.close();
     return true;
 }
 
 bool AutoLaunch::disable()
 {
-    return QFile::remove(desktopFilePath());
+    const QString path = desktopFilePath();
+    // Nothing to remove means autostart is already off.
+    if (!QFile::exists(path))
+        return true;
+
+    return QFile::remove(path);
 }

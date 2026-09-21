@@ -243,6 +243,15 @@ void EditorDialog::onChangePassword()
         return;
     }
 
+    PasswordDialog dlg3("修改密码", "确认新密码：", this);
+    if (dlg3.exec() != QDialog::Accepted)
+        return;
+
+    if (dlg2.password() != dlg3.password()) {
+        QMessageBox::warning(this, "修改密码", "两次输入的新密码不一致。");
+        return;
+    }
+
     m_controller->changePassword(dlg1.password(), dlg2.password());
     QMessageBox::information(this, "修改密码", "密码已更改。");
 }

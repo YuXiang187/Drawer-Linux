@@ -20,6 +20,7 @@ public:
 private:
     void buildMenu();
     void syncFloatingWindowAction(bool enabled);
+    void syncAutoLaunchAction(bool enabled);
 
     ApplicationController *m_controller;
     QSystemTrayIcon *m_trayIcon;

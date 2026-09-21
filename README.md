@@ -30,6 +30,8 @@ cmake --build build-release -j$(nproc)
 ctest --test-dir build-release --output-on-failure
 ```
 
+## 功能
+
 命令行参数：
 
 ```bash
@@ -37,6 +39,19 @@ ctest --test-dir build-release --output-on-failure
 ./drawer --version    # 显示版本
 ./drawer --help       # 显示帮助
 ```
+
+系统托盘菜单：
+
+| 菜单项 | 说明 |
+| --- | --- |
+| 抽取 | 从名单中随机抽取一个名称（左键单击托盘图标同效） |
+| 自启 | 开机自启，写入 `~/.config/autostart/drawer.desktop` |
+| 浮窗 | 显示/隐藏悬浮按钮，左键抽取，右键拖动移动位置 |
+| 编辑 | 需要密码（初始密码 `123456`），管理名单、导入/导出、修改密码 |
+| 统计 | 显示名单总数与当前名单 |
+| 帮助 | 外部热键绑定方法与浮窗置顶指引 |
+| 关于 | 版本与作者信息 |
+| 退出 | 退出程序 |
 
 ## 打包
 

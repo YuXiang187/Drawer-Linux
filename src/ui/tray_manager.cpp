@@ -33,6 +33,10 @@ TrayManager::TrayManager(ApplicationController *controller, QObject *parent)
     // The window may also be closed from outside the menu (e.g. Alt+F4).
     connect(m_controller, &ApplicationController::floatingWindowChanged,
             this, &TrayManager::syncFloatingWindowAction);
+
+    // Autostart can fail to be applied, in which case the item must revert.
+    connect(m_controller, &ApplicationController::autoLaunchChanged,
+            this, &TrayManager::syncAutoLaunchAction);
 }
 
 TrayManager::~TrayManager()
@@ -130,4 +134,14 @@ void TrayManager::syncFloatingWindowAction(bool enabled)
     // Block the signal: the controller already owns the state.
     const QSignalBlocker blocker(m_actionFloatingWindow);
     m_actionFloatingWindow->setChecked(enabled);
+}
+
+void TrayManager::syncAutoLaunchAction(bool enabled)
+{
+    if (!m_actionAutoLaunch)
+        return;
+
+    // Block the signal: the controller already owns the state.
+    const QSignalBlocker blocker(m_actionAutoLaunch);
+    m_actionAutoLaunch->setChecked(enabled);
 }

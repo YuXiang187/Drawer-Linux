@@ -1,11 +1,12 @@
 #include "single_instance.h"
 #include <QDebug>
-#include <QLockFile>
-#include <QLocalServer>
-#include <QLocalSocket>
-#include <QStandardPaths>
 #include <QDir>
 #include <QFileInfo>
+#include <QLocalServer>
+#include <QLocalSocket>
+#include <QLockFile>
+#include <QStandardPaths>
+#include <memory>
 #include <unistd.h>
 
 static QString ipcServerName()
@@ -16,9 +17,6 @@ static QString ipcServerName()
 SingleInstance::SingleInstance(const QString &overridePath, QObject *parent)
     : QObject(parent)
     , m_overridePath(overridePath)
-    , m_lockFile(nullptr)
-    , m_locked(false)
-    , m_server(nullptr)
 {
 }
 
@@ -47,44 +45,40 @@ bool SingleInstance::tryLock()
     if (m_locked)
         return true;
 
-    m_lockFile = new QLockFile(lockFilePath());
-    m_lockFile->setStaleLockTime(0);
+    auto lockFile = std::make_unique<QLockFile>(lockFilePath());
+    lockFile->setStaleLockTime(0);
 
-    if (m_lockFile->tryLock()) {
-        m_locked = true;
+    if (!lockFile->tryLock())
+        return false;
 
-        const QString serverName = ipcServerName();
-        QLocalServer::removeServer(serverName);
-        m_server = new QLocalServer(this);
-        if (!m_server->listen(serverName)) {
-            qWarning() << "SingleInstance::tryLock: QLocalServer::listen() failed:" << m_server->errorString();
-            delete m_server;
-            m_server = nullptr;
-            delete m_lockFile;
-            m_lockFile = nullptr;
-            m_locked = false;
-            return false;
-        }
+    const QString serverName = ipcServerName();
+    QLocalServer::removeServer(serverName);
 
-        connect(m_server, &QLocalServer::newConnection, this, [this]() {
-            QLocalSocket *socket = m_server->nextPendingConnection();
-            connect(socket, &QLocalSocket::readyRead, this, [this, socket]() {
-                QByteArray data = socket->readAll();
-                QString cmd = QString::fromUtf8(data).trimmed();
-                if (!cmd.isEmpty()) {
-                    emit commandReceived(cmd);
-                }
-                socket->write("ok\n");
-                socket->flush();
-            });
-            connect(socket, &QLocalSocket::disconnected, socket, &QLocalSocket::deleteLater);
-        });
-        return true;
+    auto server = std::make_unique<QLocalServer>();
+    if (!server->listen(serverName)) {
+        qWarning() << "SingleInstance::tryLock: QLocalServer::listen() failed:" << server->errorString();
+        return false;
     }
 
-    delete m_lockFile;
-    m_lockFile = nullptr;
-    return false;
+    m_lockFile = std::move(lockFile);
+    m_server = std::move(server);
+    m_locked = true;
+
+    connect(m_server.get(), &QLocalServer::newConnection, this, [this]() {
+        QLocalSocket *socket = m_server->nextPendingConnection();
+        connect(socket, &QLocalSocket::readyRead, this, [this, socket]() {
+            QByteArray data = socket->readAll();
+            QString cmd = QString::fromUtf8(data).trimmed();
+            if (!cmd.isEmpty()) {
+                emit commandReceived(cmd);
+            }
+            socket->write("ok\n");
+            socket->flush();
+        });
+        connect(socket, &QLocalSocket::disconnected, socket, &QLocalSocket::deleteLater);
+    });
+
+    return true;
 }
 
 void SingleInstance::unlock()
@@ -94,12 +88,10 @@ void SingleInstance::unlock()
 
     if (m_server) {
         m_server->close();
-        delete m_server;
-        m_server = nullptr;
+        m_server.reset();
     }
 
-    delete m_lockFile;
-    m_lockFile = nullptr;
+    m_lockFile.reset();
     m_locked = false;
 }
 
