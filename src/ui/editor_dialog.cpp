@@ -117,7 +117,7 @@ void EditorDialog::loadNames()
 void EditorDialog::syncTextToModel()
 {
     QString text = m_textEdit->toPlainText();
-    text.replace(" ", "").replace("\t", "").replace("\n", ",").replace("\r", "");
+    text.replace("\r", "").replace("\n", ",").replace("\t", " ");
     const QString &cleaned = text;
     m_textEdit->blockSignals(true);
     if (m_textEdit->toPlainText() != cleaned) {

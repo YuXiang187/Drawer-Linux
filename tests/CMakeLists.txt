@@ -14,6 +14,7 @@ add_executable(test_random_engine
     ../src/core/random_engine.cpp
 )
 target_include_directories(test_random_engine PRIVATE ${TEST_INCLUDE_DIR})
+target_compile_options(test_random_engine PRIVATE -Wall -Wextra -Wpedantic)
 target_link_libraries(test_random_engine PRIVATE ${TEST_LIBRARIES})
 add_test(NAME RandomEngine COMMAND test_random_engine)
 
@@ -24,5 +25,6 @@ add_executable(test_config_manager
     ../src/data/encryptor.cpp
 )
 target_include_directories(test_config_manager PRIVATE ${TEST_INCLUDE_DIR})
+target_compile_options(test_config_manager PRIVATE -Wall -Wextra -Wpedantic)
 target_link_libraries(test_config_manager PRIVATE ${TEST_LIBRARIES} OpenSSL::Crypto)
 add_test(NAME ConfigManager COMMAND test_config_manager)

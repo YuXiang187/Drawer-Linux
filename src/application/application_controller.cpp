@@ -203,7 +203,7 @@ void ApplicationController::about()
 {
     QMessageBox::about(nullptr, "关于 YuXiang Drawer",
         "YuXiang Drawer：名称随机抽取器\n\n"
-        "版本 1.0\n"
+        "版本 1.0.0\n"
         "作者 YuXiang187\n\n"
         "“编辑”功能的初始密码为 123456。");
 }

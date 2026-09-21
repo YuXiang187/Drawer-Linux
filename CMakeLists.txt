@@ -49,6 +49,8 @@ qt_add_executable(${PROJECT_NAME} MANUAL_FINALIZATION
 
 target_include_directories(${PROJECT_NAME} PRIVATE src)
 
+target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Core
     Qt6::Widgets
