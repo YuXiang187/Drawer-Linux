@@ -1,6 +1,7 @@
 #include "config_manager.h"
 #include "encryptor.h"
 
+#include <QDebug>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -49,6 +50,8 @@ void ConfigManager::loadFromFile()
 
         if (key == QLatin1String("isAutoLaunch")) {
             m_autoLaunch = (value.toLower() == QLatin1String("true"));
+        } else if (key == QLatin1String("Mode")) {
+            m_floatingWindow = (value.toInt() == 1);
         } else if (key == QLatin1String("Key")) {
             m_password = encryptor.decrypt(value);
         } else if (key == QLatin1String("initPool")) {
@@ -62,7 +65,7 @@ void ConfigManager::loadFromFile()
                 m_pool = decrypted.split(',', Qt::SkipEmptyParts);
             }
         }
-        // Mode and Hotkey are fixed on write and ignored on read
+        // Hotkey is fixed on write and ignored on read
     }
 }
 
@@ -84,6 +87,16 @@ bool ConfigManager::autoLaunch() const
 void ConfigManager::setAutoLaunch(bool enabled)
 {
     m_autoLaunch = enabled;
+}
+
+bool ConfigManager::floatingWindow() const
+{
+    return m_floatingWindow;
+}
+
+void ConfigManager::setFloatingWindow(bool enabled)
+{
+    m_floatingWindow = enabled;
 }
 
 QString ConfigManager::password() const
@@ -121,13 +134,15 @@ void ConfigManager::sync()
     QDir().mkpath(QFileInfo(m_filePath).absolutePath());
 
     QFile file(m_filePath);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate))
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
+        qWarning() << "ConfigManager::sync: cannot write" << m_filePath << file.errorString();
         return;
+    }
 
     QTextStream stream(&file);
     Encryptor encryptor;
 
-    stream << "Mode:0\n";
+    stream << "Mode:" << (m_floatingWindow ? 1 : 0) << "\n";
     stream << "isAutoLaunch:" << (m_autoLaunch ? "true" : "false") << "\n";
     stream << "Hotkey:F8\n";
 

@@ -4,7 +4,9 @@
 #include "platform/single_instance.h"
 #include "platform/auto_launch.h"
 #include "ui/draw_window.h"
+#include "ui/floating_window.h"
 
+#include <QCoreApplication>
 #include <QMessageBox>
 
 ApplicationController::ApplicationController(QObject *parent)
@@ -14,12 +16,31 @@ ApplicationController::ApplicationController(QObject *parent)
     , m_singleInstance(std::make_unique<SingleInstance>())
     , m_autoLaunch(std::make_unique<AutoLaunch>())
     , m_drawWindow(std::make_unique<DrawWindow>())
+    , m_floatingWindow(std::make_unique<FloatingWindow>())
 {
     connect(m_singleInstance.get(), &SingleInstance::commandReceived, this, [this](const QString &cmd) {
         if (cmd == "trigger") {
             triggerDraw();
         }
     });
+
+    connect(m_floatingWindow.get(), &FloatingWindow::drawRequested,
+            this, &ApplicationController::triggerDraw);
+
+    // The window was closed from outside the menu (e.g. Alt+F4): keep the
+    // menu item and the config file in sync with the real state.
+    connect(m_floatingWindow.get(), &FloatingWindow::closedByUser, this, [this]() {
+        if (m_isQuitting || !m_floatingWindowEnabled)
+            return;
+
+        m_floatingWindowEnabled = false;
+        saveFloatingWindowState(false);
+        emit floatingWindowChanged(false);
+    });
+
+    if (QCoreApplication *app = QCoreApplication::instance()) {
+        connect(app, &QCoreApplication::aboutToQuit, this, [this]() { m_isQuitting = true; });
+    }
 }
 
 ApplicationController::~ApplicationController() = default;
@@ -39,6 +60,11 @@ bool ApplicationController::init()
     }
 
     m_namePool->setState(m_config->initPool(), m_config->pool());
+
+    // Restore the floating window state persisted as "Mode" in the config file.
+    m_floatingWindowEnabled = m_config->floatingWindow();
+    if (m_floatingWindowEnabled)
+        m_floatingWindow->showCentered();
 
     return true;
 }
@@ -103,6 +129,48 @@ void ApplicationController::setAutoLaunch(bool enabled)
 bool ApplicationController::isAutoLaunch() const
 {
     return m_autoLaunch->isEnabled();
+}
+
+void ApplicationController::setFloatingWindow(bool enabled)
+{
+    // the clicked state to Drawer.config (Mode:1 / Mode:0).
+    saveFloatingWindowState(enabled);
+
+    if (m_floatingWindowEnabled == enabled)
+        return;
+
+    m_floatingWindowEnabled = enabled;
+
+    if (enabled)
+        m_floatingWindow->showCentered();
+    else
+        m_floatingWindow->hide();
+
+    emit floatingWindowChanged(enabled);
+
+    if (enabled)
+        showFloatingWindowTip();
+}
+
+bool ApplicationController::isFloatingWindowEnabled() const
+{
+    return m_floatingWindowEnabled;
+}
+
+void ApplicationController::saveFloatingWindowState(bool enabled)
+{
+    m_config->setFloatingWindow(enabled);
+    m_config->sync();
+}
+
+void ApplicationController::showFloatingWindowTip() const
+{
+    QMessageBox::information(nullptr, "浮窗",
+        "如需让浮窗始终置顶在屏幕，请按照以下指引操作。\n\n"
+        "KDE桌面置顶：\n"
+        "按下Alt+F3，在弹出的菜单中点击“更多操作” - “置顶”\n\n"
+        "GNOME桌面置顶：\n"
+        "按下Alt+Space，在弹出的菜单中点击“置顶”");
 }
 
 void ApplicationController::showStatistics()

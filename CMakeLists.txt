@@ -21,6 +21,7 @@ set(SOURCES
     src/application/application_controller.cpp
     src/ui/tray_manager.cpp
     src/ui/draw_window.cpp
+    src/ui/floating_window.cpp
     src/ui/editor_dialog.cpp
     src/ui/password_dialog.cpp
 )
@@ -36,6 +37,7 @@ set(HEADERS
     src/application/application_controller.h
     src/ui/tray_manager.h
     src/ui/draw_window.h
+    src/ui/floating_window.h
     src/ui/editor_dialog.h
     src/ui/password_dialog.h
 )

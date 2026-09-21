@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <memory>
 
 class ApplicationController;
 class QSystemTrayIcon;
@@ -12,13 +13,17 @@ class TrayManager : public QObject
     Q_OBJECT
 public:
     explicit TrayManager(ApplicationController *controller, QObject *parent = nullptr);
+    ~TrayManager() override;
+
     void show();
 
 private:
     void buildMenu();
+    void syncFloatingWindowAction(bool enabled);
 
     ApplicationController *m_controller;
     QSystemTrayIcon *m_trayIcon;
-    QMenu *m_menu;
+    std::unique_ptr<QMenu> m_menu;
     QAction *m_actionAutoLaunch;
+    QAction *m_actionFloatingWindow;
 };

@@ -7,6 +7,7 @@
 #include <QApplication>
 #include <QMenu>
 #include <QMessageBox>
+#include <QSignalBlocker>
 #include <QStyle>
 #include <QSystemTrayIcon>
 
@@ -14,19 +15,31 @@ TrayManager::TrayManager(ApplicationController *controller, QObject *parent)
     : QObject(parent)
     , m_controller(controller)
     , m_trayIcon(new QSystemTrayIcon(this))
-    , m_menu(new QMenu)
+    , m_menu(std::make_unique<QMenu>())
     , m_actionAutoLaunch(nullptr)
+    , m_actionFloatingWindow(nullptr)
 {
     m_trayIcon->setToolTip("YuXiang Drawer");
     m_trayIcon->setIcon(QApplication::style()->standardIcon(QStyle::SP_MediaPlay));
     buildMenu();
-    m_trayIcon->setContextMenu(m_menu);
+    m_trayIcon->setContextMenu(m_menu.get());
 
     connect(m_trayIcon, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
         if (reason == QSystemTrayIcon::Trigger) {
             m_controller->triggerDraw();
         }
     });
+
+    // The window may also be closed from outside the menu (e.g. Alt+F4).
+    connect(m_controller, &ApplicationController::floatingWindowChanged,
+            this, &TrayManager::syncFloatingWindowAction);
+}
+
+TrayManager::~TrayManager()
+{
+    // Detach the menu before it is destroyed, then drop the tray icon.
+    m_trayIcon->setContextMenu(nullptr);
+    m_trayIcon->hide();
 }
 
 void TrayManager::buildMenu()
@@ -42,6 +55,13 @@ void TrayManager::buildMenu()
     m_actionAutoLaunch->setCheckable(true);
     m_actionAutoLaunch->setChecked(m_controller->isAutoLaunch());
     connect(m_actionAutoLaunch, &QAction::toggled, m_controller, &ApplicationController::setAutoLaunch);
+
+    // Floating window
+    m_actionFloatingWindow = m_menu->addAction("浮窗");
+    m_actionFloatingWindow->setCheckable(true);
+    m_actionFloatingWindow->setChecked(m_controller->isFloatingWindowEnabled());
+    connect(m_actionFloatingWindow, &QAction::toggled,
+            m_controller, &ApplicationController::setFloatingWindow);
 
     // Hotkey
     QAction *actionHotkey = m_menu->addAction("热键");
@@ -89,4 +109,14 @@ void TrayManager::buildMenu()
 void TrayManager::show()
 {
     m_trayIcon->show();
+}
+
+void TrayManager::syncFloatingWindowAction(bool enabled)
+{
+    if (!m_actionFloatingWindow)
+        return;
+
+    // Block the signal: the controller already owns the state.
+    const QSignalBlocker blocker(m_actionFloatingWindow);
+    m_actionFloatingWindow->setChecked(enabled);
 }
