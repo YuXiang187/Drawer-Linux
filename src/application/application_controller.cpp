@@ -7,6 +7,7 @@
 #include "ui/floating_window.h"
 
 #include <QCoreApplication>
+#include <QEvent>
 #include <QMessageBox>
 
 ApplicationController::ApplicationController(QObject *parent)
@@ -39,8 +40,25 @@ ApplicationController::ApplicationController(QObject *parent)
     });
 
     if (QCoreApplication *app = QCoreApplication::instance()) {
+        // qApp->quit() makes QApplication close every top level window before
+        // aboutToQuit is emitted, so watch QEvent::Quit to learn about the
+        // shutdown early enough (see prepareForQuit()).
+        app->installEventFilter(this);
         connect(app, &QCoreApplication::aboutToQuit, this, [this]() { m_isQuitting = true; });
     }
+}
+
+bool ApplicationController::eventFilter(QObject *watched, QEvent *event)
+{
+    if (event->type() == QEvent::Quit)
+        m_isQuitting = true;
+
+    return QObject::eventFilter(watched, event);
+}
+
+void ApplicationController::prepareForQuit()
+{
+    m_isQuitting = true;
 }
 
 ApplicationController::~ApplicationController() = default;

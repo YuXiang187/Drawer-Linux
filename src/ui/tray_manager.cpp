@@ -103,7 +103,12 @@ void TrayManager::buildMenu()
 
     // Quit
     QAction *actionQuit = m_menu->addAction("退出");
-    connect(actionQuit, &QAction::triggered, qApp, &QCoreApplication::quit);
+    connect(actionQuit, &QAction::triggered, this, [this]() {
+        // Quitting closes the floating window as well; mark the shutdown first
+        // so that close is not mistaken for a user close (which writes Mode:0).
+        m_controller->prepareForQuit();
+        qApp->quit();
+    });
 }
 
 void TrayManager::show()

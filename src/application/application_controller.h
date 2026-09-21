@@ -20,6 +20,10 @@ public:
 
     bool init();
 
+    // Marks the application as shutting down, so that windows closed by the
+    // shutdown itself are not mistaken for user closes.
+    void prepareForQuit();
+
     QStringList currentNames() const;
     bool verifyPassword(const QString &password) const;
     bool changePassword(const QString &oldPassword, const QString &newPassword);
@@ -37,6 +41,9 @@ public slots:
 
 signals:
     void floatingWindowChanged(bool enabled);
+
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
     // Writes the floating window state to Drawer.config as Mode:0 / Mode:1.
