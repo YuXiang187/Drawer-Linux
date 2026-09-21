@@ -88,6 +88,22 @@ sudo rpm -e drawer
 
 运行时依赖由打包工具自动推导：deb 使用 `dpkg-shlibdeps`（libqt6core6t64、libqt6gui6、libqt6network6、libqt6widgets6、libssl3t64 等），rpm 使用 `rpmbuild` 的自动依赖（libQt6Core.so.6、libcrypto.so.3 等）
 
+rpm安装后文件所在目录：
+
+```bash
+rpm -qlp drawer-1.0.0-1.x86_64.rpm
+# /usr/bin/drawer
+# /usr/share/applications/drawer.desktop
+```
+
+deb安装后文件所在目录：
+
+```bash
+dpkg-deb -c drawer_1.0.0_amd64.deb
+# /usr/bin/drawer
+# /usr/share/applications/drawer.desktop
+```
+
 ## GNOME桌面运行
 
 GNOME桌面依赖`gnome-shell-extension-appindicator`运行

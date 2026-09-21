@@ -117,6 +117,9 @@ if(UNIX AND NOT APPLE)
     set(CPACK_RPM_PACKAGE_LICENSE "GPL-3.0-or-later")
     set(CPACK_RPM_PACKAGE_GROUP "Applications/Utility")
     set(CPACK_RPM_PACKAGE_DESCRIPTION "${CPACK_PACKAGE_DESCRIPTION}")
+    set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION
+        "/usr/share/applications"
+    )
 
     include(CPack)
 endif()
