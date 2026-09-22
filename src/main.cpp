@@ -53,7 +53,10 @@ int main(int argc, char *argv[])
             "sudo dnf install gnome-shell-extension-appindicator\n\n"
             "Debian/Ubuntu:\n"
             "sudo apt install gnome-shell-extension-appindicator\n\n"
-            "启用扩展后请重新登录桌面环境。");
+            "启用扩展：\n\n"
+            "gnome-extensions enable appindicatorsupport@rgcjonas.gmail.com\n\n"
+            "重新登录桌面环境后生效。"
+            );
         return 1;
     }
 

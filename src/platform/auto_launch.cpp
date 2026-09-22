@@ -46,7 +46,9 @@ bool AutoLaunch::enable()
     QTextStream out(&file);
     out << "[Desktop Entry]\n";
     out << "Name=YuXiang Drawer\n";
-    out << "Comment=Name Random Drawer\n";
+    out << "Comment=Randomly select a name\n";
+    out << "Comment[zh_CN]=随机抽取名称\n";
+    out << "Comment[zh_TW]=隨機抽取名稱\n";
     // Quoted: the executable path may contain spaces.
     out << "Exec=\"" << execPath() << "\"\n";
     out << "Type=Application\n";

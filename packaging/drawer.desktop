@@ -1,6 +1,8 @@
 [Desktop Entry]
 Name=YuXiang Drawer
-Comment=Name Random Drawer
+Comment=Randomly select a name
+Comment[zh_CN]=随机抽取名称
+Comment[zh_TW]=隨機抽取名稱
 Exec=drawer
 Type=Application
 Terminal=false
