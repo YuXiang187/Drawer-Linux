@@ -50,6 +50,10 @@ private:
     // Writes the floating window state to Drawer.config as Mode:0 / Mode:1.
     void saveFloatingWindowState(bool enabled);
 
+    // True while the desktop session (logout/shutdown) is tearing the
+    // application down. Window closes during that phase are not user closes.
+    bool isSessionShuttingDown() const;
+
     std::unique_ptr<NamePool> m_namePool;
     std::unique_ptr<ConfigManager> m_config;
     std::unique_ptr<SingleInstance> m_singleInstance;

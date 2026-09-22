@@ -7,8 +7,17 @@
 #include "ui/floating_window.h"
 
 #include <QCoreApplication>
+#include <QDBusConnection>
+#include <QDBusMessage>
 #include <QEvent>
+#include <QGuiApplication>
 #include <QMessageBox>
+
+namespace {
+// The session bus answers isShuttingDown() in well under a millisecond. This
+// upper bound only matters when ksmserver is unresponsive.
+constexpr int kSessionQueryTimeoutMs = 500;
+} // namespace
 
 ApplicationController::ApplicationController(QObject *parent)
     : QObject(parent)
@@ -29,13 +38,19 @@ ApplicationController::ApplicationController(QObject *parent)
             this, &ApplicationController::triggerDraw);
 
     // The window was closed from outside the menu (e.g. Alt+F4): keep the
-    // menu item and the config file in sync with the real state.
+    // menu item and the config file in sync with the real state. A close
+    // issued by the session manager when logging out or shutting down must
+    // not be persisted, otherwise the floating window would stay disabled
+    // after the next login.
     connect(m_floatingWindow.get(), &FloatingWindow::closedByUser, this, [this]() {
         if (m_isQuitting || !m_floatingWindowEnabled)
             return;
 
+        const bool sessionShuttingDown = isSessionShuttingDown();
+
         m_floatingWindowEnabled = false;
-        saveFloatingWindowState(false);
+        if (!sessionShuttingDown)
+            saveFloatingWindowState(false);
         emit floatingWindowChanged(false);
     });
 
@@ -59,6 +74,39 @@ bool ApplicationController::eventFilter(QObject *watched, QEvent *event)
 void ApplicationController::prepareForQuit()
 {
     m_isQuitting = true;
+}
+
+bool ApplicationController::isSessionShuttingDown() const
+{
+    if ((qGuiApp && qGuiApp->isSavingSession()) || QCoreApplication::closingDown())
+        return true;
+
+    // KDE Plasma (at least up to 6.3) has no session management for native
+    // Wayland clients: on logout or shutdown KWin simply closes every
+    // toplevel, which reaches the application as an ordinary close event,
+    // indistinguishable from Alt+F4. During that phase ksmserver is in its
+    // shutdown state, so ask it directly to tell the two cases apart.
+    if (!QDBusConnection::sessionBus().isConnected())
+        return false;
+
+    const QDBusMessage reply = QDBusConnection::sessionBus().call(
+        QDBusMessage::createMethodCall(QStringLiteral("org.kde.ksmserver"),
+                                       QStringLiteral("/KSMServer"),
+                                       QStringLiteral("org.kde.KSMServerInterface"),
+                                       QStringLiteral("isShuttingDown")),
+        QDBus::Block, kSessionQueryTimeoutMs);
+
+    if (reply.type() == QDBusMessage::ReplyMessage && !reply.arguments().isEmpty())
+        return reply.arguments().constFirst().toBool();
+
+    if (reply.type() == QDBusMessage::ErrorMessage
+        && reply.errorName() == QLatin1String("org.freedesktop.DBus.Error.ServiceUnknown")) {
+        // Not a KDE session: no ksmserver, so this is a regular user close.
+        return false;
+    }
+
+    // Unexpected reply (timeout, ...): never risk disabling the window.
+    return true;
 }
 
 ApplicationController::~ApplicationController() = default;

@@ -19,7 +19,9 @@ public:
 
 signals:
     void drawRequested();
-    // Emitted when the window is closed by the user (e.g. Alt+F4).
+    // Emitted whenever the window is closed, e.g. by the user (Alt+F4) or by
+    // the session manager during logout/shutdown. The controller decides
+    // whether the close counts as a user preference change.
     void closedByUser();
 
 protected:
