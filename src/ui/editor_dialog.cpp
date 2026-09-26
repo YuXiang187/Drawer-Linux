@@ -14,12 +14,16 @@
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QSignalBlocker>
 #include <QSplitter>
 #include <QStringListModel>
 #include <QStyle>
 #include <QTextStream>
 #include <QToolBar>
 #include <QVBoxLayout>
+
+#include <algorithm>
+#include <functional>
 
 EditorDialog::EditorDialog(ApplicationController *controller, QWidget *parent)
     : QDialog(parent)
@@ -119,14 +123,15 @@ void EditorDialog::syncTextToModel()
     QString text = m_textEdit->toPlainText();
     text.replace("\r", "").replace("\n", ",").replace("\t", " ");
     const QString &cleaned = text;
-    m_textEdit->blockSignals(true);
-    if (m_textEdit->toPlainText() != cleaned) {
-        m_textEdit->setPlainText(cleaned);
-        QTextCursor cursor = m_textEdit->textCursor();
-        cursor.movePosition(QTextCursor::End);
-        m_textEdit->setTextCursor(cursor);
+    {
+        const QSignalBlocker blocker(m_textEdit);
+        if (m_textEdit->toPlainText() != cleaned) {
+            m_textEdit->setPlainText(cleaned);
+            QTextCursor cursor = m_textEdit->textCursor();
+            cursor.movePosition(QTextCursor::End);
+            m_textEdit->setTextCursor(cursor);
+        }
     }
-    m_textEdit->blockSignals(false);
 
     const QStringList list = cleaned.split(',', Qt::SkipEmptyParts);
     m_model->setStringList(list);
