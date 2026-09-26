@@ -18,6 +18,17 @@ target_compile_options(test_random_engine PRIVATE -Wall -Wextra -Wpedantic)
 target_link_libraries(test_random_engine PRIVATE ${TEST_LIBRARIES})
 add_test(NAME RandomEngine COMMAND test_random_engine)
 
+# test_name_pool
+add_executable(test_name_pool
+    test_name_pool.cpp
+    ../src/core/name_pool.cpp
+    ../src/core/random_engine.cpp
+)
+target_include_directories(test_name_pool PRIVATE ${TEST_INCLUDE_DIR})
+target_compile_options(test_name_pool PRIVATE -Wall -Wextra -Wpedantic)
+target_link_libraries(test_name_pool PRIVATE ${TEST_LIBRARIES})
+add_test(NAME NamePool COMMAND test_name_pool)
+
 # test_config_manager (ConfigManager depends on Encryptor/OpenSSL)
 add_executable(test_config_manager
     test_config_manager.cpp

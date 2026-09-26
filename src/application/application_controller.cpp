@@ -163,7 +163,9 @@ void ApplicationController::setNames(const QStringList &names)
     m_namePool->setNames(names);
 
     m_config->setInitPool(names);
-    m_config->setPool(names);
+    // Persist the Gaussian pool (draw history order), which merges the new
+    // init pool with the history kept so far.
+    m_config->setPool(m_namePool->pool());
     m_config->sync();
 }
 
@@ -177,8 +179,10 @@ void ApplicationController::triggerDraw()
 
     m_drawWindow->showName(result);
 
+    // The Gaussian draw moved the picked name to the end of the pool: persist
+    // the updated history so it survives a restart.
     m_config->setInitPool(m_namePool->names());
-    m_config->setPool(m_namePool->remainingNames());
+    m_config->setPool(m_namePool->pool());
     m_config->sync();
 }
 

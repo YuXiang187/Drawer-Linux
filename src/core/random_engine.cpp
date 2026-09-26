@@ -34,3 +34,13 @@ int RandomEngine::nextInt(int min, int max)
     std::uniform_int_distribution<int> dist(min, max);
     return dist(d->generator);
 }
+
+double RandomEngine::nextGaussian(double mean, double stddev)
+{
+    // std::normal_distribution requires a positive standard deviation.
+    if (stddev <= 0.0)
+        return mean;
+
+    std::normal_distribution<double> dist(mean, stddev);
+    return dist(d->generator);
+}

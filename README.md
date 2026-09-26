@@ -112,6 +112,14 @@ GNOME桌面依赖`gnome-shell-extension-appindicator`运行
 
 检查是否启用：`gnome-extensions list --enabled`
 
+## 抽取算法
+
+自v1.1版本起，抽取名称功能的 Gaussian（高斯分布）模型参考了 [rpick](https://github.com/bowlofeggs/rpick) 的实现
+
+该算法会根据抽签历史动态调整概率：名单中越久没有被抽中的项目，概率越高；最近被抽中的项目移动到列表末尾，概率降低。默认标准差缩放因子为 3.0
+
+本项目与 rpick 均采用 GPL-3.0 开源许可证
+
 ## 卸载后清理
 
 清理残留配置文件：
