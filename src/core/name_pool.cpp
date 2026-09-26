@@ -6,7 +6,6 @@
 #include <cmath>
 
 namespace {
-// rpick's default_stddev_scaling_factor() (rpick src/config.rs): the standard
 // deviation used for sampling is the length of the pool divided by this factor.
 constexpr double kStddevScalingFactor = 3.0;
 } // namespace
@@ -52,34 +51,11 @@ QString NamePool::draw()
 
     syncPool();
 
-    // Port of rpick's Engine::pick_gaussian() (rpick src/engine.rs):
-    //
-    //     loop {
-    //         let stddev = (candidates.len() as f64) / stddev_scaling_factor;
-    //         let normal = Normal::new(0.0, stddev).unwrap();
-    //         index = normal.sample(&mut self.rng).abs() as usize;
-    //
-    //         if let Some(value) = candidates.get(index) {
-    //             ...
-    //             index = choices.iter().position(|x| x == value).unwrap();
-    //             break;
-    //         }
-    //     }
-    //
-    //     let value = choices.remove(index);
-    //     choices.push(value);
-    //
-    // The Drawer GUI accepts every draw, so rpick's rejection branch (which
-    // shrinks the temporary candidate list) never applies: the candidates are
-    // the pool itself on every iteration, and out-of-range samples are simply
-    // resampled with the same standard deviation.
     int index = 0;
     for (;;) {
         const double stddev = static_cast<double>(m_pool.size()) / kStddevScalingFactor;
         const double sample = std::fabs(m_random.nextGaussian(0.0, stddev));
 
-        // Rust's `as usize` truncates towards zero; `candidates.get(index)`
-        // yields None for out-of-range indexes, which makes rpick resample.
         if (sample < static_cast<double>(m_pool.size())) {
             index = static_cast<int>(sample);
             break;
@@ -88,8 +64,7 @@ QString NamePool::draw()
 
     const QString value = m_pool.at(index);
 
-    // rpick relocates the picked value through
-    // `choices.iter().position(|x| x == value)`, i.e. its first occurrence.
+    // If multiple identical values exist, it locates the first occurrence.
     const int first = m_pool.indexOf(value);
     m_pool.removeAt(first);
     m_pool.append(value);

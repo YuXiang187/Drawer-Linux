@@ -72,7 +72,7 @@ void TestNamePool::testInitPoolUntouchedByDraw()
 
 void TestNamePool::testGaussianPrefersFront()
 {
-    // rpick samples index = |Normal(0, len / 3.0)|, so the front of the pool
+    // samples index = |Normal(0, len / 3.0)|, so the front of the pool
     // must be picked far more often than the end.
     const QStringList names{"N0", "N1", "N2", "N3", "N4",
                             "N5", "N6", "N7", "N8", "N9"};
