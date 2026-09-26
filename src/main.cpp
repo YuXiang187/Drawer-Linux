@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
     app.setQuitOnLastWindowClosed(false);
     app.setApplicationName("Drawer");
     app.setOrganizationName("YuXiang");
-    app.setApplicationVersion("1.0.0");
+    app.setApplicationVersion("1.1.0");
     // Ties the windows to drawer.desktop so Wayland compositors can show the
     // right icon and application name.
     app.setDesktopFileName("drawer");
@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
     }
 
     if (cli.wantsVersion()) {
-        qDebug() << "Drawer 1.0.0";
+        qDebug() << "Drawer 1.1.0";
         return 0;
     }
 

@@ -253,9 +253,23 @@ void ApplicationController::showStatistics()
 
 void ApplicationController::about()
 {
-    QMessageBox::about(nullptr, "关于 YuXiang Drawer",
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    const QString text =
+        "YuXiang Drawer：名称随机抽取器<br><br>"
+        "版本 1.1.0<br>"
+        "作者 YuXiang187<br><br>"
+        "“编辑”功能的初始密码为 123456。<br><br>"
+        "抽取名称功能的高斯分布模型参考了 "
+        "<a href=\"https://github.com/bowlofeggs/rpick\">rpick</a> 的实现。";
+#else
+    // Hyperlinks are not supported, plain text is displayed
+    const QString text =
         "YuXiang Drawer：名称随机抽取器\n\n"
-        "版本 1.0.0\n"
+        "版本 1.1.0\n"
         "作者 YuXiang187\n\n"
-        "“编辑”功能的初始密码为 123456。");
+        "“编辑”功能的初始密码为 123456。\n\n"
+        "抽取名称功能的高斯分布模型参考了 rpick 的实现。";
+#endif
+
+    QMessageBox::about(nullptr, "关于 YuXiang Drawer", text);
 }
