@@ -42,6 +42,7 @@ public slots:
 signals:
     void floatingWindowChanged(bool enabled);
     void autoLaunchChanged(bool enabled);
+    void drawActiveChanged(bool active);
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;

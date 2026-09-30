@@ -77,6 +77,14 @@ void NamePool::reset()
     m_pool = m_initPool;
 }
 
+QString NamePool::randomName()
+{
+    if (m_pool.isEmpty())
+        return QString();
+
+    return m_pool.at(m_random.nextInt(0, m_pool.size() - 1));
+}
+
 void NamePool::syncPool()
 {
     QHash<QString, int> required;

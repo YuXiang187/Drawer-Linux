@@ -37,6 +37,10 @@ TrayManager::TrayManager(ApplicationController *controller, QObject *parent)
     // Autostart can fail to be applied, in which case the item must revert.
     connect(m_controller, &ApplicationController::autoLaunchChanged,
             this, &TrayManager::syncAutoLaunchAction);
+
+    // The tray icon shows the busy state while a draw animation is running.
+    connect(m_controller, &ApplicationController::drawActiveChanged,
+            this, &TrayManager::syncDrawState);
 }
 
 TrayManager::~TrayManager()
@@ -144,4 +148,10 @@ void TrayManager::syncAutoLaunchAction(bool enabled)
     // Block the signal: the controller already owns the state.
     const QSignalBlocker blocker(m_actionAutoLaunch);
     m_actionAutoLaunch->setChecked(enabled);
+}
+
+void TrayManager::syncDrawState(bool active)
+{
+    const QStyle::StandardPixmap pixmap = active ? QStyle::SP_MediaStop : QStyle::SP_MediaPlay;
+    m_trayIcon->setIcon(QApplication::style()->standardIcon(pixmap));
 }

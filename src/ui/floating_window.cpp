@@ -43,6 +43,12 @@ FloatingWindow::FloatingWindow(QWidget *parent)
     connect(m_button, &QPushButton::clicked, this, &FloatingWindow::drawRequested);
 }
 
+void FloatingWindow::setRunning(bool running)
+{
+    const QStyle::StandardPixmap pixmap = running ? QStyle::SP_MediaStop : QStyle::SP_MediaPlay;
+    m_button->setIcon(QApplication::style()->standardIcon(pixmap));
+}
+
 void FloatingWindow::showCentered()
 {
     centerOnScreen();

@@ -21,6 +21,7 @@ private:
     void buildMenu();
     void syncFloatingWindowAction(bool enabled);
     void syncAutoLaunchAction(bool enabled);
+    void syncDrawState(bool active);
 
     ApplicationController *m_controller;
     QSystemTrayIcon *m_trayIcon;

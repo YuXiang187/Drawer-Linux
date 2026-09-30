@@ -25,7 +25,7 @@ ApplicationController::ApplicationController(QObject *parent)
     , m_config(std::make_unique<ConfigManager>())
     , m_singleInstance(std::make_unique<SingleInstance>())
     , m_autoLaunch(std::make_unique<AutoLaunch>())
-    , m_drawWindow(std::make_unique<DrawWindow>())
+    , m_drawWindow(std::make_unique<DrawWindow>(m_namePool.get()))
     , m_floatingWindow(std::make_unique<FloatingWindow>())
 {
     connect(m_singleInstance.get(), &SingleInstance::commandReceived, this, [this](const QString &cmd) {
@@ -36,6 +36,20 @@ ApplicationController::ApplicationController(QObject *parent)
 
     connect(m_floatingWindow.get(), &FloatingWindow::drawRequested,
             this, &ApplicationController::triggerDraw);
+
+    connect(m_drawWindow.get(), &DrawWindow::animationStarted, this, [this]() {
+        m_floatingWindow->setRunning(true);
+        emit drawActiveChanged(true);
+    });
+
+    connect(m_drawWindow.get(), &DrawWindow::drawFinished, this, [this]() {
+        m_floatingWindow->setRunning(false);
+        emit drawActiveChanged(false);
+
+        m_config->setInitPool(m_namePool->names());
+        m_config->setPool(m_namePool->pool());
+        m_config->sync();
+    });
 
     // The window was closed from outside the menu (e.g. Alt+F4): keep the
     // menu item and the config file in sync with the real state. A close
@@ -171,19 +185,12 @@ void ApplicationController::setNames(const QStringList &names)
 
 void ApplicationController::triggerDraw()
 {
-    const QString result = m_namePool->draw();
-    if (result.isEmpty()) {
+    if (m_namePool->isEmpty()) {
         QMessageBox::information(nullptr, "错误", "列表为空，请先添加名称。");
         return;
     }
 
-    m_drawWindow->showName(result);
-
-    // The Gaussian draw moved the picked name to the end of the pool: persist
-    // the updated history so it survives a restart.
-    m_config->setInitPool(m_namePool->names());
-    m_config->setPool(m_namePool->pool());
-    m_config->sync();
+    m_drawWindow->start();
 }
 
 void ApplicationController::setAutoLaunch(bool enabled)

@@ -16,6 +16,8 @@ public:
     void removeName(const QString &name);
 
     QString draw();
+    QString randomName();
+
     void reset();
 
     int size() const;

@@ -14,6 +14,8 @@ private slots:
     void testSetNamesPreservesHistory();
     void testSetNamesPrependsNewNames();
     void testSetStateRepairsIncompletePool();
+    void testRandomNameKeepsHistory();
+    void testRandomNameOnEmptyPool();
     void testEmptyPool();
     void testSingleName();
 };
@@ -142,6 +144,31 @@ void TestNamePool::testSetStateRepairsIncompletePool()
     QCOMPARE(restored.last(), QString("Carol"));
 
     QVERIFY(!pool.draw().isEmpty());
+}
+
+void TestNamePool::testRandomNameKeepsHistory()
+{
+    NamePool pool;
+    const QStringList names{"Alice", "Bob", "Carol", "Dave"};
+    pool.setNames(names);
+    pool.draw();
+
+    const QStringList history = pool.pool();
+    for (int i = 0; i < 200; ++i) {
+        // The animation frames must not modify the Gaussian history.
+        QVERIFY(names.contains(pool.randomName()));
+        QCOMPARE(pool.pool(), history);
+    }
+    QCOMPARE(pool.names(), names);
+}
+
+void TestNamePool::testRandomNameOnEmptyPool()
+{
+    NamePool pool;
+    QVERIFY(pool.randomName().isEmpty());
+
+    pool.setNames(QStringList{});
+    QVERIFY(pool.randomName().isEmpty());
 }
 
 void TestNamePool::testEmptyPool()

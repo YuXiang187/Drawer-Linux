@@ -17,6 +17,10 @@ public:
     // Shows the window centered on the screen the cursor currently is on.
     void showCentered();
 
+    // Switches the button between the draw icon and the busy icon shown
+    // while a draw animation is running.
+    void setRunning(bool running);
+
 signals:
     void drawRequested();
     // Emitted whenever the window is closed, e.g. by the user (Alt+F4) or by
