@@ -1,8 +1,8 @@
 # Drawer-Linux
 
-如需使用Windows的版本，请前往[Drawer](https://github.com/YuXiang187/Drawer)库。
+如需使用Windows的版本，请前往[Drawer](https://github.com/YuXiang187/Drawer)库
 
-如需使用Android版本，请前往[Drawer-Android](https://github.com/YuXiang187/Drawer-Android)库。
+如需使用Android版本，请前往[Drawer-Android](https://github.com/YuXiang187/Drawer-Android)库
 
 技术栈：C++20、Qt 6、Qt Widgets、CMake、Linux
 
@@ -110,7 +110,7 @@ dpkg-deb -c drawer_1.2.0_amd64.deb
 # /usr/share/doc/drawer/copyright
 ```
 
-## ARM 架构构建
+## ARM架构打包
 
 包内是编译好的可执行文件，包的架构必须与二进制的架构一致，因此 ARM64 / ARMv7 的包需要在对应架构上编译（原生构建或交叉编译），只改包的架构字段是无效的。构建系统会按目标架构给包打上正确的标记：
 
@@ -120,7 +120,7 @@ dpkg-deb -c drawer_1.2.0_amd64.deb
 | ARM64（aarch64） | `drawer_1.2.0_arm64.deb` | `drawer-1.2.0-1.aarch64.rpm` |
 | ARMv7（armhf） | `drawer_1.2.0_armhf.deb` | `drawer-1.2.0-1.armv7hl.rpm` |
 
-在树莓派等 ARM 原生设备上按上文步骤构建即可，`dpkg --print-architecture` 与 `uname -m` 会自动给出正确的架构，无需额外参数。
+在树莓派等 ARM 原生设备上按上文步骤构建即可，`dpkg --print-architecture` 与 `uname -m` 会自动给出正确的架构，无需额外参数
 
 x86_64 主机交叉编译构建，以 Debian 13 为例
 
