@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(Drawer VERSION 1.1.0 LANGUAGES CXX)
+project(Drawer VERSION 1.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -81,6 +81,10 @@ if(UNIX AND NOT APPLE)
     install(FILES packaging/drawer.desktop
         DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications
     )
+    # Copyright and license -> /usr/share/doc/drawer/copyright
+    install(FILES packaging/copyright
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/drawer
+    )
 endif()
 
 # ---------------------------------------------------------------------------
@@ -92,12 +96,9 @@ if(UNIX AND NOT APPLE)
     set(CPACK_PACKAGE_NAME "drawer")
     set(CPACK_PACKAGE_VENDOR "YuXiang")
     set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
-    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Name Random Drawer")
-    string(CONCAT CPACK_PACKAGE_DESCRIPTION
-        "YuXiang Drawer is a small tray application that draws a random name "
-        "from a user managed name pool. The pool is stored encrypted and can "
-        "be maintained from the tray icon menu.")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Software for randomly selecting names.")
     set(CPACK_PACKAGE_CONTACT "YuXiang187")
+    set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/YuXiang187/Drawer-Linux")
     set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
     set(CPACK_PACKAGE_EXECUTABLES "drawer" "YuXiang Drawer")
     set(CPACK_STRIP_FILES TRUE)
@@ -117,7 +118,7 @@ if(UNIX AND NOT APPLE)
     set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
     set(CPACK_RPM_PACKAGE_LICENSE "GPL-3.0-or-later")
     set(CPACK_RPM_PACKAGE_GROUP "Applications/Utility")
-    set(CPACK_RPM_PACKAGE_DESCRIPTION "${CPACK_PACKAGE_DESCRIPTION}")
+    set(CPACK_RPM_PACKAGE_DESCRIPTION "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}")
     set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION
         "/usr/share/applications"
     )

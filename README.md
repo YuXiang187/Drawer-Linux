@@ -1,5 +1,9 @@
 # Drawer-Linux
 
+如需使用Windows的版本，请前往[Drawer](https://github.com/YuXiang187/Drawer)库。
+
+如需使用Android版本，请前往[Drawer-Android](https://github.com/YuXiang187/Drawer-Android)库。
+
 技术栈：C++20、Qt 6、Qt Widgets、CMake、Linux
 
 运行环境：Debian 13、KDE Plasma 6、Wayland
@@ -72,17 +76,17 @@ cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/u
 cmake --build build-release -j$(nproc)
 
 cd build-release
-cpack -G DEB          # drawer_1.1.0_amd64.deb
-cpack -G RPM          # drawer-1.1.0-1.x86_64.rpm
+cpack -G DEB          # drawer_1.2.0_amd64.deb
+cpack -G RPM          # drawer-1.2.0-1.x86_64.rpm
 ```
 
 安装与卸载：
 
 ```bash
-sudo apt install ./drawer_1.1.0_amd64.deb   # Debian/Ubuntu
+sudo apt install ./drawer_1.2.0_amd64.deb   # Debian/Ubuntu
 sudo dpkg -r drawer
 
-sudo dnf install ./drawer-1.1.0-1.x86_64.rpm # Fedora/openSUSE
+sudo dnf install ./drawer-1.2.0-1.x86_64.rpm # Fedora/openSUSE
 sudo rpm -e drawer
 ```
 
@@ -91,17 +95,19 @@ sudo rpm -e drawer
 rpm安装后文件所在目录：
 
 ```bash
-rpm -qlp drawer-1.1.0-1.x86_64.rpm
+rpm -qlp drawer-1.2.0-1.x86_64.rpm
 # /usr/bin/drawer
 # /usr/share/applications/drawer.desktop
+# /usr/share/doc/drawer/copyright
 ```
 
 deb安装后文件所在目录：
 
 ```bash
-dpkg-deb -c drawer_1.1.0_amd64.deb
+dpkg-deb -c drawer_1.2.0_amd64.deb
 # /usr/bin/drawer
 # /usr/share/applications/drawer.desktop
+# /usr/share/doc/drawer/copyright
 ```
 
 ## GNOME桌面运行
