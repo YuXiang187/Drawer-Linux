@@ -71,6 +71,7 @@ void DrawWindow::start()
     m_progressValue = kProgressSteps;
     m_progressBar->setValue(m_progressValue);
     setLabelColor(kFlashColor);
+    m_label->setText(m_pool->randomName());
 
     centerOnScreen();
     show();
@@ -94,13 +95,12 @@ void DrawWindow::onFlashTick()
     // last frame
     if (m_flashFrame == kFlashFrames) {
         m_label->setText(m_pool->draw());
+        setLabelColor(resultColor());
         return;
     }
 
     m_flashTimer->stop();
     m_isFlashing = false;
-
-    setLabelColor(resultColor());
 
     emit drawFinished();
 
@@ -127,7 +127,9 @@ void DrawWindow::setLabelColor(const QColor &color)
 
 QColor DrawWindow::resultColor() const
 {
-    return palette().color(QPalette::WindowText);
+    QPalette palette = this->palette();
+    palette.setCurrentColorGroup(QPalette::Active);
+    return palette.color(QPalette::WindowText);
 }
 
 void DrawWindow::centerOnScreen()
