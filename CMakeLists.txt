@@ -107,6 +107,23 @@ if(UNIX AND NOT APPLE)
     # Packages always install below /usr, independent of CMAKE_INSTALL_PREFIX
     set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
 
+    # The packages hold compiled binaries, so they must be labelled with the
+    # architecture they were built for instead of the architecture of the host
+    if(CMAKE_CROSSCOMPILING)
+        if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)$")
+            set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "arm64")
+            set(CPACK_RPM_PACKAGE_ARCHITECTURE "aarch64")
+        elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(armv7l|armv7|armhf|arm)$")
+            set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "armhf")
+            set(CPACK_RPM_PACKAGE_ARCHITECTURE "armv7hl")
+        endif()
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^armv6l$")
+        # rpm names the hard-float ARM architectures differently than uname
+        set(CPACK_RPM_PACKAGE_ARCHITECTURE "armv6hl")
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^armv7l$")
+        set(CPACK_RPM_PACKAGE_ARCHITECTURE "armv7hl")
+    endif()
+
     # --- .deb ---------------------------------------------------------------
     set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
     set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
