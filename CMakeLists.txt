@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(Drawer VERSION 1.2.0 LANGUAGES CXX)
+project(Drawer VERSION 1.3.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -16,6 +16,8 @@ set(SOURCES
     src/core/random_engine.cpp
     src/data/config_manager.cpp
     src/data/encryptor.cpp
+    src/data/group_store.cpp
+    src/data/key_value_store.cpp
     src/platform/single_instance.cpp
     src/platform/auto_launch.cpp
     src/application/application_controller.cpp
@@ -32,6 +34,8 @@ set(HEADERS
     src/core/random_engine.h
     src/data/config_manager.h
     src/data/encryptor.h
+    src/data/group_store.h
+    src/data/key_value_store.h
     src/platform/single_instance.h
     src/platform/auto_launch.h
     src/application/application_controller.h

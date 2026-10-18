@@ -3,10 +3,13 @@
 #include <QDialog>
 #include <QStringList>
 
+#include <functional>
+
 class ApplicationController;
 class QListView;
 class QPlainTextEdit;
 class QLineEdit;
+class QComboBox;
 class QStringListModel;
 class QLabel;
 class QAction;
@@ -29,11 +32,19 @@ private slots:
     void onTextChanged();
     void onSelectionChanged();
     void onFindNext();
+    void onGroupSelected(int index);
+    void onGroupAdd();
+    void onGroupRename();
+    void onGroupDelete();
 
 private:
-    void loadNames();
+    void loadGroup(const QString &groupId);
+    void refreshGroupComboBox();
     void syncTextToModel();
     void updateStatus();
+    bool isListModified() const;
+    void withDiscardConfirmation(const std::function<void()> &action);
+    bool validateGroupName(const QString &name, const QString &excludeId);
 
     ApplicationController *m_controller;
     QStringListModel *m_model;
@@ -41,6 +52,10 @@ private:
     QPlainTextEdit *m_textEdit;
     QLineEdit *m_addEdit;
     QLineEdit *m_findEdit;
+    QComboBox *m_groupCombo;
     QLabel *m_statusLabel;
+    QStringList m_groupIds;
+    QString m_currentGroupId;
+    QString m_loadedContent;
     int m_findIndex;
 };

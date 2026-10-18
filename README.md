@@ -51,11 +51,20 @@ ctest --test-dir build-release --output-on-failure
 | 抽取 | 从名单中随机抽取一个名称（左键单击托盘图标同效） |
 | 自启 | 开机自启，写入 `~/.config/autostart/drawer.desktop` |
 | 浮窗 | 显示/隐藏悬浮按钮，左键抽取，右键拖动移动位置 |
-| 编辑 | 需要密码（初始密码 `123456`），管理名单、导入/导出、修改密码 |
-| 统计 | 显示名单总数与当前名单 |
+| 编辑 | 需要密码（初始密码 `123456`），管理分组、名单、导入/导出、修改密码 |
+| 分组 | 切换抽取使用的名单分组 |
+| 统计 | 显示当前分组、名单总数与当前名单 |
 | 帮助 | 外部热键绑定方法与浮窗置顶指引 |
 | 关于 | 版本与作者信息 |
 | 退出 | 退出程序 |
+
+## 分组
+
+配置文件支持多个互相独立的名单，同一时间只有一个分组参与抽取。
+
+- 托盘菜单“分组”切换当前抽取分组，切换后下次抽取立即使用新分组
+- 编辑窗口顶部的“分组”工具栏可以添加、重命名、删除分组；切换分组时若有未应用的修改，会提示是否丢弃
+- 新分组默认包含 `Item1` ~ `Item5`，至少保留一个分组，组名不超过 30 个字符且不能重名
 
 ## 打包
 
@@ -76,17 +85,17 @@ cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/u
 cmake --build build-release -j$(nproc)
 
 cd build-release
-cpack -G DEB          # drawer_1.2.0_amd64.deb
-cpack -G RPM          # drawer-1.2.0-1.x86_64.rpm
+cpack -G DEB          # drawer_1.3.0_amd64.deb
+cpack -G RPM          # drawer-1.3.0-1.x86_64.rpm
 ```
 
 安装与卸载：
 
 ```bash
-sudo apt install ./drawer_1.2.0_amd64.deb   # Debian/Ubuntu
+sudo apt install ./drawer_1.3.0_amd64.deb   # Debian/Ubuntu
 sudo dpkg -r drawer
 
-sudo dnf install ./drawer-1.2.0-1.x86_64.rpm # Fedora/openSUSE
+sudo dnf install ./drawer-1.3.0-1.x86_64.rpm # Fedora/openSUSE
 sudo rpm -e drawer
 ```
 
@@ -95,7 +104,7 @@ sudo rpm -e drawer
 rpm安装后文件所在目录：
 
 ```bash
-rpm -qlp drawer-1.2.0-1.x86_64.rpm
+rpm -qlp drawer-1.3.0-1.x86_64.rpm
 # /usr/bin/drawer
 # /usr/share/applications/drawer.desktop
 # /usr/share/doc/drawer/copyright
@@ -104,7 +113,7 @@ rpm -qlp drawer-1.2.0-1.x86_64.rpm
 deb安装后文件所在目录：
 
 ```bash
-dpkg-deb -c drawer_1.2.0_amd64.deb
+dpkg-deb -c drawer_1.3.0_amd64.deb
 # /usr/bin/drawer
 # /usr/share/applications/drawer.desktop
 # /usr/share/doc/drawer/copyright
@@ -116,9 +125,9 @@ dpkg-deb -c drawer_1.2.0_amd64.deb
 
 | 目标架构 | deb | rpm |
 | --- | --- | --- |
-| x86_64 | `drawer_1.2.0_amd64.deb` | `drawer-1.2.0-1.x86_64.rpm` |
-| ARM64（aarch64） | `drawer_1.2.0_arm64.deb` | `drawer-1.2.0-1.aarch64.rpm` |
-| ARMv7（armhf） | `drawer_1.2.0_armhf.deb` | `drawer-1.2.0-1.armv7hl.rpm` |
+| x86_64 | `drawer_1.3.0_amd64.deb` | `drawer-1.3.0-1.x86_64.rpm` |
+| ARM64（aarch64） | `drawer_1.3.0_arm64.deb` | `drawer-1.3.0-1.aarch64.rpm` |
+| ARMv7（armhf） | `drawer_1.3.0_armhf.deb` | `drawer-1.3.0-1.armv7hl.rpm` |
 
 在树莓派等 ARM 原生设备上按上文步骤构建即可，`dpkg --print-architecture` 与 `uname -m` 会自动给出正确的架构，无需额外参数
 

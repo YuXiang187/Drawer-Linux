@@ -27,7 +27,22 @@ public:
     QStringList currentNames() const;
     bool verifyPassword(const QString &password) const;
     bool changePassword(const QString &oldPassword, const QString &newPassword);
-    void setNames(const QStringList &names);
+
+    // Groups: every group owns an independent name list, only the active one
+    // takes part in drawing.
+    QStringList groupIds() const;
+    QString groupName(const QString &id) const;
+    QString activeGroupId() const;
+    QStringList groupInitNames(const QString &id) const;
+    int groupCount() const;
+    QString findGroupIdByName(const QString &name) const;
+    QString addGroup(const QString &name);
+    bool renameGroup(const QString &id, const QString &name);
+    bool deleteGroup(const QString &id);
+    // Makes the group active and reloads the draw pool from it.
+    bool activateGroup(const QString &id);
+    // Persists the edited name list of a group without activating it.
+    void saveGroupNames(const QString &id, const QStringList &names);
 
 public slots:
     void triggerDraw();

@@ -131,13 +131,9 @@ bool ApplicationController::init()
         return false;
     }
 
-    if (!m_config->fileExists()) {
-        const QStringList defaultNames{"Item1", "Item2", "Item3", "Item4", "Item5"};
-        m_config->setInitPool(defaultNames);
-        m_config->setPool(defaultNames);
-
-        m_config->sync();
-    }
+    // Persists the default settings on first run and the migration of a
+    // config written before groups existed.
+    m_config->sync();
 
     m_namePool->setState(m_config->initPool(), m_config->pool());
 
@@ -172,15 +168,88 @@ bool ApplicationController::changePassword(const QString &oldPassword, const QSt
     return true;
 }
 
-void ApplicationController::setNames(const QStringList &names)
+QStringList ApplicationController::groupIds() const
 {
-    m_namePool->setNames(names);
+    return m_config->groups()->ids();
+}
 
-    m_config->setInitPool(names);
-    // Persist the Gaussian pool (draw history order), which merges the new
-    // init pool with the history kept so far.
-    m_config->setPool(m_namePool->pool());
+QString ApplicationController::groupName(const QString &id) const
+{
+    return m_config->groups()->name(id);
+}
+
+QString ApplicationController::activeGroupId() const
+{
+    return m_config->groups()->activeId();
+}
+
+QStringList ApplicationController::groupInitNames(const QString &id) const
+{
+    return m_config->groups()->init(id);
+}
+
+int ApplicationController::groupCount() const
+{
+    return m_config->groups()->count();
+}
+
+QString ApplicationController::findGroupIdByName(const QString &name) const
+{
+    return m_config->groups()->findByName(name);
+}
+
+QString ApplicationController::addGroup(const QString &name)
+{
+    // An empty name means the default one, used when the config unexpectedly
+    // holds no group at all.
+    const QString groupName = name.isEmpty() ? GroupStore::DefaultGroupName : name;
+
+    const QString id = m_config->groups()->add(groupName);
     m_config->sync();
+    return id;
+}
+
+bool ApplicationController::renameGroup(const QString &id, const QString &name)
+{
+    if (!m_config->groups()->rename(id, name))
+        return false;
+
+    m_config->sync();
+    return true;
+}
+
+bool ApplicationController::deleteGroup(const QString &id)
+{
+    if (!m_config->groups()->remove(id))
+        return false;
+
+    m_config->sync();
+
+    // The removed group may have been the active one, in which case the
+    // draw pool must follow the group that is active now.
+    m_namePool->setState(m_config->initPool(), m_config->pool());
+    return true;
+}
+
+bool ApplicationController::activateGroup(const QString &id)
+{
+    if (!m_config->groups()->setActiveId(id))
+        return false;
+
+    m_config->sync();
+    m_namePool->setState(m_config->initPool(), m_config->pool());
+    return true;
+}
+
+void ApplicationController::saveGroupNames(const QString &id, const QStringList &names)
+{
+    m_config->groups()->setInit(id, names);
+    m_config->sync();
+
+    // Only the active group feeds the draw pool; editing another group must
+    // not disturb the pool in use.
+    if (id == m_config->groups()->activeId())
+        m_namePool->setState(m_config->initPool(), m_config->pool());
 }
 
 void ApplicationController::triggerDraw()
@@ -251,8 +320,9 @@ void ApplicationController::saveFloatingWindowState(bool enabled)
 
 void ApplicationController::showStatistics()
 {
-    const QStringList names = m_namePool->names();
-    const QString text = QString("抽取数量：%1\n\n抽取名单：%2")
+    const QStringList names = currentNames();
+    const QString text = QString("抽取分组：%1\n\n抽取数量：%2\n\n抽取名单：%3")
+                             .arg(groupName(activeGroupId()))
                              .arg(names.size())
                              .arg(names.join(", "));
     QMessageBox::information(nullptr, "统计", text);
@@ -263,7 +333,7 @@ void ApplicationController::about()
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     const QString text =
         "YuXiang Drawer：名称随机抽取器<br><br>"
-        "版本 1.2.0<br>"
+        "版本 1.3.0<br>"
         "作者 YuXiang187<br><br>"
         "“编辑”功能的初始密码为 123456。<br><br>"
         "抽取名称功能的高斯分布模型参考了 "
@@ -272,7 +342,7 @@ void ApplicationController::about()
     // Hyperlinks are not supported, plain text is displayed
     const QString text =
         "YuXiang Drawer：名称随机抽取器\n\n"
-        "版本 1.2.0\n"
+        "版本 1.3.0\n"
         "作者 YuXiang187\n\n"
         "“编辑”功能的初始密码为 123456。\n\n"
         "抽取名称功能的高斯分布模型参考了 rpick 的实现。";

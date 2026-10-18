@@ -3,6 +3,30 @@
 #include <QFile>
 #include <QTextStream>
 #include "data/config_manager.h"
+#include "data/encryptor.h"
+#include "data/group_store.h"
+
+namespace {
+
+void writeConfig(const QString &path, const QString &content)
+{
+    QFile file(path);
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate));
+    QTextStream out(&file);
+    out << content;
+}
+
+QString readConfig(const QString &path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        return QString();
+
+    QTextStream in(&file);
+    return in.readAll();
+}
+
+} // namespace
 
 class TestConfigManager : public QObject
 {
@@ -20,6 +44,10 @@ private slots:
     void testFloatingWindowModeParsing();
     void testConfigFileExistence();
     void testEmptyPoolIsValidState();
+    void testLegacyConfigMigration();
+    void testLegacyEmptyListMigration();
+    void testUnknownKeysArePreserved();
+    void testGroupPersistence();
 };
 
 void TestConfigManager::testDefaults()
@@ -28,11 +56,17 @@ void TestConfigManager::testDefaults()
     QVERIFY(tempDir.isValid());
 
     ConfigManager cm(tempDir.path());
-    QCOMPARE(cm.version(), 1);
+    QCOMPARE(cm.version(), 2);
     QCOMPARE(cm.autoLaunch(), false);
     QCOMPARE(cm.password(), QString("123456"));
-    QVERIFY(cm.initPool().isEmpty());
-    QVERIFY(cm.pool().isEmpty());
+
+    // A fresh config already holds the group the application draws from.
+    QCOMPARE(cm.groups()->count(), 1);
+    QCOMPARE(cm.groups()->ids(), QStringList({"g0"}));
+    QCOMPARE(cm.groups()->name("g0"), GroupStore::DefaultGroupName);
+    QCOMPARE(cm.groups()->activeId(), QString("g0"));
+    QCOMPARE(cm.initPool(), QStringList({"Item1", "Item2", "Item3", "Item4", "Item5"}));
+    QCOMPARE(cm.pool(), cm.initPool());
 }
 
 void TestConfigManager::testSetAndGet()
@@ -87,23 +121,22 @@ void TestConfigManager::testFileFormat()
     cm.setPool(QStringList{"X"});
     cm.sync();
 
-    QFile file(tempDir.path() + "/Drawer.config");
-    QVERIFY(file.open(QIODevice::ReadOnly | QIODevice::Text));
-    QTextStream in(&file);
-    QString content = in.readAll();
-
+    QString content = readConfig(tempDir.path() + "/Drawer.config");
     QVERIFY(content.contains("Mode:0"));
     QVERIFY(content.contains("Hotkey:F8"));
     QVERIFY(content.contains("isAutoLaunch:false"));
+    QVERIFY(content.contains("Groups:g0"));
+    QVERIFY(content.contains("CurrentGroup:g0"));
+    QVERIFY(content.contains("name@g0:"));
+    QVERIFY(content.contains("initPool@g0:"));
+    QVERIFY(content.contains("pool@g0:"));
 
     // Enabling the floating window writes Mode:1
     cm.setFloatingWindow(true);
     cm.sync();
 
-    QFile enabled(tempDir.path() + "/Drawer.config");
-    QVERIFY(enabled.open(QIODevice::ReadOnly | QIODevice::Text));
-    QTextStream enabledIn(&enabled);
-    QVERIFY(enabledIn.readAll().contains("Mode:1"));
+    content = readConfig(tempDir.path() + "/Drawer.config");
+    QVERIFY(content.contains("Mode:1"));
 }
 
 void TestConfigManager::testPasswordEncryption()
@@ -115,10 +148,7 @@ void TestConfigManager::testPasswordEncryption()
     cm.setPassword("mypassword");
     cm.sync();
 
-    QFile file(tempDir.path() + "/Drawer.config");
-    QVERIFY(file.open(QIODevice::ReadOnly | QIODevice::Text));
-    QTextStream in(&file);
-    QString content = in.readAll();
+    const QString content = readConfig(tempDir.path() + "/Drawer.config");
 
     // The raw password must NOT appear in the file
     QVERIFY(!content.contains("mypassword"));
@@ -161,7 +191,6 @@ void TestConfigManager::testFloatingWindowDefaults()
 
     ConfigManager cm(tempDir.path());
     QCOMPARE(cm.floatingWindow(), false);
-    QCOMPARE(cm.version(), 1);
 }
 
 void TestConfigManager::testFloatingWindowPersistence()
@@ -246,6 +275,108 @@ void TestConfigManager::testEmptyPoolIsValidState()
     QVERIFY(cm.initPool().isEmpty());
     QVERIFY(cm.pool().isEmpty());
     QCOMPARE(cm.password(), QString("123456"));
+}
+
+void TestConfigManager::testLegacyConfigMigration()
+{
+    QTemporaryDir tempDir;
+    QVERIFY(tempDir.isValid());
+
+    Encryptor encryptor;
+    const QString path = tempDir.path() + "/Drawer.config";
+    writeConfig(path, QString("Mode:1\n"
+                              "isAutoLaunch:true\n"
+                              "Key:%1\n"
+                              "initPool:%2\n"
+                              "pool:%3\n")
+                          .arg(encryptor.encrypt("123456"),
+                               encryptor.encrypt("Alice,Bob"),
+                               encryptor.encrypt("Bob,Alice")));
+
+    {
+        ConfigManager cm(tempDir.path());
+
+        // The single list of the old format becomes the default group, with
+        // its draw history intact.
+        QCOMPARE(cm.groups()->count(), 1);
+        QCOMPARE(cm.groups()->ids(), QStringList({"g0"}));
+        QCOMPARE(cm.groups()->name("g0"), GroupStore::DefaultGroupName);
+        QCOMPARE(cm.groups()->activeId(), QString("g0"));
+        QCOMPARE(cm.initPool(), QStringList({"Alice", "Bob"}));
+        QCOMPARE(cm.pool(), QStringList({"Bob", "Alice"}));
+        QVERIFY(cm.floatingWindow());
+        QVERIFY(cm.autoLaunch());
+        QCOMPARE(cm.password(), QString("123456"));
+
+        cm.sync();
+    }
+
+    const QString content = readConfig(path);
+    QVERIFY(!content.contains("initPool:"));
+    QVERIFY(!content.contains("pool:"));
+    QVERIFY(content.contains("initPool@g0:"));
+    QVERIFY(content.contains("pool@g0:"));
+
+    // The migrated names survive a restart.
+    ConfigManager reloaded(tempDir.path());
+    QCOMPARE(reloaded.initPool(), QStringList({"Alice", "Bob"}));
+    QCOMPARE(reloaded.pool(), QStringList({"Bob", "Alice"}));
+}
+
+void TestConfigManager::testLegacyEmptyListMigration()
+{
+    QTemporaryDir tempDir;
+    QVERIFY(tempDir.isValid());
+
+    // An empty list is a valid configuration and must stay empty.
+    writeConfig(tempDir.path() + "/Drawer.config", "initPool:\npool:\n");
+
+    ConfigManager cm(tempDir.path());
+    QCOMPARE(cm.groups()->count(), 1);
+    QVERIFY(cm.initPool().isEmpty());
+    QVERIFY(cm.pool().isEmpty());
+}
+
+void TestConfigManager::testUnknownKeysArePreserved()
+{
+    QTemporaryDir tempDir;
+    QVERIFY(tempDir.isValid());
+
+    const QString path = tempDir.path() + "/Drawer.config";
+    writeConfig(path, "Custom:value\nMode:1\nisAutoLaunch:false\n");
+
+    ConfigManager cm(tempDir.path());
+    cm.sync();
+
+    // Keys this version does not know about must survive a rewrite, so a
+    // config shared with another version is not stripped.
+    const QString content = readConfig(path);
+    QVERIFY(content.contains("Custom:value"));
+    QVERIFY(content.contains("Mode:1"));
+    QVERIFY(content.contains("Groups:g0"));
+}
+
+void TestConfigManager::testGroupPersistence()
+{
+    QTemporaryDir tempDir;
+    QVERIFY(tempDir.isValid());
+
+    {
+        ConfigManager cm(tempDir.path());
+        const QString id = cm.groups()->add("Class A");
+        cm.groups()->setInit(id, QStringList{"Alice", "Bob"});
+        cm.groups()->setActiveId(id);
+        cm.sync();
+    }
+
+    {
+        ConfigManager cm(tempDir.path());
+        QCOMPARE(cm.groups()->count(), 2);
+        QCOMPARE(cm.groups()->activeId(), QString("g1"));
+        QCOMPARE(cm.groups()->name("g1"), QString("Class A"));
+        QCOMPARE(cm.initPool(), QStringList({"Alice", "Bob"}));
+        QCOMPARE(cm.pool(), QStringList({"Alice", "Bob"}));
+    }
 }
 
 QTEST_MAIN(TestConfigManager)

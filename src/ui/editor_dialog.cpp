@@ -4,6 +4,7 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QComboBox>
 #include <QFile>
 #include <QFileDialog>
 #include <QHBoxLayout>
@@ -25,6 +26,34 @@
 #include <algorithm>
 #include <functional>
 
+namespace {
+
+// Group names are limited to 30 characters, like in the Windows version.
+constexpr int kMaxGroupNameLength = 30;
+
+bool promptGroupName(QWidget *parent, const QString &title, const QString &label,
+                     const QString &initialText, QString *name)
+{
+    QInputDialog dialog(parent);
+    dialog.setWindowTitle(title);
+    dialog.setLabelText(label);
+    dialog.setInputMode(QInputDialog::TextInput);
+    dialog.setTextValue(initialText);
+    dialog.setOkButtonText("确定");
+    dialog.setCancelButtonText("取消");
+
+    if (QLineEdit *edit = dialog.findChild<QLineEdit *>())
+        edit->setMaxLength(kMaxGroupNameLength);
+
+    if (dialog.exec() != QDialog::Accepted)
+        return false;
+
+    *name = dialog.textValue();
+    return true;
+}
+
+} // namespace
+
 EditorDialog::EditorDialog(ApplicationController *controller, QWidget *parent)
     : QDialog(parent)
     , m_controller(controller)
@@ -32,9 +61,26 @@ EditorDialog::EditorDialog(ApplicationController *controller, QWidget *parent)
 {
     setWindowIcon(QApplication::style()->standardIcon(QStyle::SP_MediaPlay));
     setWindowTitle("YuXiang Drawer");
-    resize(800, 500);
+    resize(800, 540);
 
     auto *mainLayout = new QVBoxLayout(this);
+
+    // Group toolbar
+    auto *groupBar = new QToolBar(this);
+    mainLayout->addWidget(groupBar);
+
+    auto *groupLabel = new QLabel("分组", groupBar);
+    groupLabel->setContentsMargins(4, 0, 8, 0);
+    groupBar->addWidget(groupLabel);
+
+    m_groupCombo = new QComboBox(groupBar);
+    m_groupCombo->setFixedWidth(200);
+    groupBar->addWidget(m_groupCombo);
+    groupBar->addSeparator();
+
+    QAction *actGroupAdd = groupBar->addAction("添加分组");
+    QAction *actGroupRename = groupBar->addAction("重命名分组");
+    QAction *actGroupDelete = groupBar->addAction("删除分组");
 
     // Toolbar
     auto *toolBar = new QToolBar(this);
@@ -91,7 +137,7 @@ EditorDialog::EditorDialog(ApplicationController *controller, QWidget *parent)
     mainLayout->addWidget(m_statusLabel);
 
     // Load data
-    loadNames();
+    loadGroup(m_controller->activeGroupId());
 
     // Connections
     connect(actImport, &QAction::triggered, this, &EditorDialog::onImport);
@@ -108,14 +154,177 @@ EditorDialog::EditorDialog(ApplicationController *controller, QWidget *parent)
     connect(m_listView->selectionModel(), &QItemSelectionModel::selectionChanged,
             this, &EditorDialog::onSelectionChanged);
     connect(m_findEdit, &QLineEdit::returnPressed, this, &EditorDialog::onFindNext);
+
+    connect(m_groupCombo, qOverload<int>(&QComboBox::activated),
+            this, &EditorDialog::onGroupSelected);
+    connect(actGroupAdd, &QAction::triggered, this, &EditorDialog::onGroupAdd);
+    connect(actGroupRename, &QAction::triggered, this, &EditorDialog::onGroupRename);
+    connect(actGroupDelete, &QAction::triggered, this, &EditorDialog::onGroupDelete);
 }
 
-void EditorDialog::loadNames()
+void EditorDialog::loadGroup(const QString &groupId)
 {
-    const QStringList names = m_controller->currentNames();
-    m_model->setStringList(names);
-    m_textEdit->setPlainText(names.join(","));
-    updateStatus();
+    QString id = groupId;
+    if (id.isEmpty())
+        id = m_controller->activeGroupId();
+    if (id.isEmpty()) {
+        // Cannot happen: the config always contains at least one group.
+        id = m_controller->addGroup(QString());
+    }
+
+    m_currentGroupId = id;
+    m_loadedContent = m_controller->groupInitNames(id).join(',');
+
+    {
+        // Fill the list model below instead of relying on textChanged, so the
+        // dialog is usable before the signals are connected.
+        const QSignalBlocker blocker(m_textEdit);
+        m_textEdit->setPlainText(m_loadedContent);
+    }
+    syncTextToModel();
+
+    setWindowTitle(QString("YuXiang Drawer - %1").arg(m_controller->groupName(id)));
+    refreshGroupComboBox();
+}
+
+void EditorDialog::refreshGroupComboBox()
+{
+    // The edited group can disappear when it is removed, fall back to the
+    // active one.
+    if (!m_controller->groupIds().contains(m_currentGroupId)) {
+        loadGroup(m_controller->activeGroupId());
+        return;
+    }
+
+    m_groupIds = m_controller->groupIds();
+
+    const QSignalBlocker blocker(m_groupCombo);
+    m_groupCombo->clear();
+    for (const QString &id : m_groupIds)
+        m_groupCombo->addItem(m_controller->groupName(id));
+
+    const int index = m_groupIds.indexOf(m_currentGroupId);
+    if (index >= 0)
+        m_groupCombo->setCurrentIndex(index);
+}
+
+bool EditorDialog::isListModified() const
+{
+    return m_textEdit->toPlainText() != m_loadedContent;
+}
+
+void EditorDialog::withDiscardConfirmation(const std::function<void()> &action)
+{
+    if (!isListModified()) {
+        action();
+        return;
+    }
+
+    const QMessageBox::StandardButton answer = QMessageBox::question(
+        this, "分组",
+        QString("是否丢弃对“%1”的修改？").arg(m_controller->groupName(m_currentGroupId)));
+    if (answer == QMessageBox::Yes)
+        action();
+
+    // The combo already shows the clicked group; restore the edited one when
+    // the action was cancelled.
+    refreshGroupComboBox();
+}
+
+bool EditorDialog::validateGroupName(const QString &name, const QString &excludeId)
+{
+    if (name.isEmpty()) {
+        QMessageBox::warning(this, "分组", "组名不能为空。");
+        return false;
+    }
+    if (name.size() > kMaxGroupNameLength) {
+        QMessageBox::warning(this, "分组", "组名不能超过30个字符。");
+        return false;
+    }
+
+    const QString existing = m_controller->findGroupIdByName(name);
+    if (!existing.isEmpty() && existing != excludeId) {
+        QMessageBox::warning(this, "分组", QString("分组“%1”已存在。").arg(name));
+        return false;
+    }
+
+    return true;
+}
+
+void EditorDialog::onGroupSelected(int index)
+{
+    if (index < 0 || index >= m_groupIds.size())
+        return;
+
+    const QString selected = m_groupIds.at(index);
+    if (selected == m_currentGroupId)
+        return;
+
+    withDiscardConfirmation([this, selected]() { loadGroup(selected); });
+}
+
+void EditorDialog::onGroupAdd()
+{
+    QString name;
+    if (!promptGroupName(this, "添加分组", "组名：", QString(), &name))
+        return;
+
+    name = name.trimmed();
+    if (!validateGroupName(name, QString()))
+        return;
+
+    if (isListModified()) {
+        const QString currentName = m_controller->groupName(m_currentGroupId);
+        const QMessageBox::StandardButton answer = QMessageBox::question(
+            this, "添加分组",
+            QString("是否保存对“%1”的修改并切换到新分组？").arg(currentName),
+            QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+        if (answer == QMessageBox::Cancel)
+            return;
+        if (answer == QMessageBox::Yes)
+            m_controller->saveGroupNames(m_currentGroupId, m_model->stringList());
+    }
+
+    loadGroup(m_controller->addGroup(name));
+}
+
+void EditorDialog::onGroupRename()
+{
+    const QString currentName = m_controller->groupName(m_currentGroupId);
+
+    QString name;
+    if (!promptGroupName(this, "重命名分组", "新组名：", currentName, &name))
+        return;
+
+    name = name.trimmed();
+    if (name == currentName)
+        return;
+    if (!validateGroupName(name, m_currentGroupId))
+        return;
+
+    m_controller->renameGroup(m_currentGroupId, name);
+    setWindowTitle(QString("YuXiang Drawer - %1").arg(name));
+    refreshGroupComboBox();
+}
+
+void EditorDialog::onGroupDelete()
+{
+    withDiscardConfirmation([this]() {
+        if (m_controller->groupCount() <= 1) {
+            QMessageBox::warning(this, "删除分组", "至少需要保留一个分组。");
+            return;
+        }
+
+        const QString name = m_controller->groupName(m_currentGroupId);
+        if (QMessageBox::question(this, "删除分组",
+                                  QString("是否删除分组“%1”？\n该分组内的名单将一并删除。").arg(name))
+            != QMessageBox::Yes) {
+            return;
+        }
+
+        m_controller->deleteGroup(m_currentGroupId);
+        loadGroup(m_controller->activeGroupId());
+    });
 }
 
 void EditorDialog::syncTextToModel()
@@ -302,13 +511,14 @@ void EditorDialog::onRemove()
 
 void EditorDialog::onApply()
 {
-    QStringList list = m_model->stringList();
+    const QStringList list = m_model->stringList();
     if (list.isEmpty()) {
         QMessageBox::warning(this, "应用", "列表不能为空。");
         return;
     }
 
-    m_controller->setNames(list);
+    m_controller->saveGroupNames(m_currentGroupId, list);
+    m_controller->activateGroup(m_currentGroupId);
     m_controller->showStatistics();
     accept();
 }

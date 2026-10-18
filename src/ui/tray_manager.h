@@ -19,6 +19,7 @@ public:
 
 private:
     void buildMenu();
+    void rebuildGroupMenu();
     void syncFloatingWindowAction(bool enabled);
     void syncAutoLaunchAction(bool enabled);
     void syncDrawState(bool active);
@@ -26,6 +27,7 @@ private:
     ApplicationController *m_controller;
     QSystemTrayIcon *m_trayIcon;
     std::unique_ptr<QMenu> m_menu;
+    QMenu *m_groupMenu;
     QAction *m_actionAutoLaunch;
     QAction *m_actionFloatingWindow;
 };

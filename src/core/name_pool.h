@@ -4,6 +4,12 @@
 
 #include <QStringList>
 
+// Rebuilds a draw pool so that it holds exactly the names of init: the draw
+// history order of the names that are still listed is preserved, while names
+// missing from the pool (newly added, or restored from an incomplete config)
+// go to the front, where the Gaussian model gives them the highest chance.
+QStringList buildSyncedPool(const QStringList &init, const QStringList &history);
+
 class NamePool
 {
 public:
@@ -35,11 +41,7 @@ public:
     bool hasName(const QString &name) const;
 
 private:
-    // Restores the invariant that m_pool contains exactly the names of
-    // m_initPool, preserving the draw history order of the names that are
-    // already present. Names missing from the pool (newly added, or restored
-    // from an incomplete config) go to the front, where the Gaussian model
-    // gives them the highest chance.
+    // Restores the invariant described by buildSyncedPool().
     void syncPool();
 
     QStringList m_initPool;

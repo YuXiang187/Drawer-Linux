@@ -87,16 +87,21 @@ QString NamePool::randomName()
 
 void NamePool::syncPool()
 {
+    m_pool = buildSyncedPool(m_initPool, m_pool);
+}
+
+QStringList buildSyncedPool(const QStringList &init, const QStringList &history)
+{
     QHash<QString, int> required;
-    for (const QString &name : m_initPool)
+    for (const QString &name : init)
         required[name] = required.value(name, 0) + 1;
 
     // Keep the draw history order of the names that are still listed.
-    QStringList history;
+    QStringList keptHistory;
     QHash<QString, int> kept;
-    for (const QString &name : m_pool) {
+    for (const QString &name : history) {
         if (kept.value(name, 0) < required.value(name, 0)) {
-            history.append(name);
+            keptHistory.append(name);
             kept[name] = kept.value(name, 0) + 1;
         }
     }
@@ -106,14 +111,14 @@ void NamePool::syncPool()
     // gives them the highest chance of being picked.
     QStringList fresh;
     QHash<QString, int> added;
-    for (const QString &name : m_initPool) {
+    for (const QString &name : init) {
         if (kept.value(name, 0) + added.value(name, 0) < required.value(name, 0)) {
             fresh.append(name);
             added[name] = added.value(name, 0) + 1;
         }
     }
 
-    m_pool = fresh + history;
+    return fresh + keptHistory;
 }
 
 int NamePool::size() const

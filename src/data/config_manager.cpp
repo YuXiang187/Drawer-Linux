@@ -1,77 +1,57 @@
 #include "config_manager.h"
-#include "encryptor.h"
 
-#include <QDebug>
 #include <QDir>
 #include <QFile>
-#include <QFileInfo>
 #include <QStandardPaths>
-#include <QTextStream>
 
-ConfigManager::ConfigManager(const QString &overridePath)
+namespace {
+
+QString configFilePath(const QString &overridePath)
 {
     QString dirPath = overridePath;
-    if (dirPath.isEmpty()) {
+    if (dirPath.isEmpty())
         dirPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
-    }
+
     QDir().mkpath(dirPath);
-    m_filePath = QDir(dirPath).absoluteFilePath("Drawer.config");
+    return QDir(dirPath).absoluteFilePath(QStringLiteral("Drawer.config"));
+}
 
-    loadFromFile();
+} // namespace
 
-    // Apply sensible defaults when file does not exist or fields are missing
-    if (m_password.isEmpty()) {
+ConfigManager::ConfigManager(const QString &overridePath)
+    : m_filePath(configFilePath(overridePath))
+    , m_store(m_filePath)
+    , m_groups(&m_store)
+{
+    m_store.load();
+
+    // A config written before groups existed holds a single list in the
+    // "initPool"/"pool" keys; turn it into the first group. A missing config
+    // (or one without any group) gets a group with the sample names.
+    m_groups.migrateLegacyList();
+
+    loadSettings();
+
+    if (m_password.isEmpty())
         m_password = QStringLiteral("123456");
-    }
 }
 
 ConfigManager::~ConfigManager() = default;
 
-void ConfigManager::loadFromFile()
+void ConfigManager::loadSettings()
 {
-    QFile file(m_filePath);
-    if (!file.exists() || !file.open(QIODevice::ReadOnly | QIODevice::Text))
-        return;
+    m_autoLaunch = (m_store.value(QStringLiteral("isAutoLaunch")).trimmed().compare(
+                        QLatin1String("true"), Qt::CaseInsensitive)
+                    == 0);
+    m_floatingWindow = (m_store.value(QStringLiteral("Mode")).trimmed().toInt() == 1);
+    m_password = m_encryptor.decrypt(m_store.value(QStringLiteral("Key")).trimmed());
 
-    QTextStream stream(&file);
-    Encryptor encryptor;
-
-    while (!stream.atEnd()) {
-        QString line = stream.readLine().trimmed();
-        if (line.isEmpty())
-            continue;
-
-        int sep = line.indexOf(':');
-        if (sep < 0)
-            continue;
-
-        QString key = line.left(sep).trimmed();
-        QString value = line.mid(sep + 1).trimmed();
-
-        if (key == QLatin1String("isAutoLaunch")) {
-            m_autoLaunch = (value.toLower() == QLatin1String("true"));
-        } else if (key == QLatin1String("Mode")) {
-            m_floatingWindow = (value.toInt() == 1);
-        } else if (key == QLatin1String("Key")) {
-            m_password = encryptor.decrypt(value);
-        } else if (key == QLatin1String("initPool")) {
-            QString decrypted = encryptor.decrypt(value);
-            if (!decrypted.isEmpty()) {
-                m_initPool = decrypted.split(',', Qt::SkipEmptyParts);
-            }
-        } else if (key == QLatin1String("pool")) {
-            QString decrypted = encryptor.decrypt(value);
-            if (!decrypted.isEmpty()) {
-                m_pool = decrypted.split(',', Qt::SkipEmptyParts);
-            }
-        }
-        // Hotkey is fixed on write and ignored on read
-    }
+    // "Hotkey" is fixed on write and ignored on read, like the Windows version.
 }
 
 int ConfigManager::version() const
 {
-    return 1;
+    return 2;
 }
 
 bool ConfigManager::fileExists() const
@@ -111,59 +91,49 @@ void ConfigManager::setPassword(const QString &password)
 
 QStringList ConfigManager::initPool() const
 {
-    return m_initPool;
+    return m_groups.init(m_groups.activeId());
 }
 
 void ConfigManager::setInitPool(const QStringList &names)
 {
-    m_initPool = names;
+    const QString id = m_groups.activeId();
+    if (!id.isEmpty())
+        m_groups.setInit(id, names);
 }
 
 QStringList ConfigManager::pool() const
 {
-    return m_pool;
+    return m_groups.pool(m_groups.activeId());
 }
 
 void ConfigManager::setPool(const QStringList &names)
 {
-    m_pool = names;
+    const QString id = m_groups.activeId();
+    if (!id.isEmpty())
+        m_groups.setPool(id, names);
+}
+
+GroupStore *ConfigManager::groups()
+{
+    return &m_groups;
 }
 
 void ConfigManager::sync()
 {
-    QDir().mkpath(QFileInfo(m_filePath).absolutePath());
+    // The group keys are written by GroupStore; only the settings owned by
+    // this class are refreshed here. Everything else in the store (including
+    // keys written by other versions) is preserved as it is.
+    m_store.setValue(QStringLiteral("Mode"), m_floatingWindow ? QStringLiteral("1")
+                                                             : QStringLiteral("0"));
+    m_store.setValue(QStringLiteral("isAutoLaunch"), m_autoLaunch ? QStringLiteral("true")
+                                                                 : QStringLiteral("false"));
+    m_store.setValue(QStringLiteral("Hotkey"), QStringLiteral("F8"));
 
-    QFile file(m_filePath);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
-        qWarning() << "ConfigManager::sync: cannot write" << m_filePath << file.errorString();
-        return;
-    }
-
-    QTextStream stream(&file);
-    Encryptor encryptor;
-
-    stream << "Mode:" << (m_floatingWindow ? 1 : 0) << "\n";
-    stream << "isAutoLaunch:" << (m_autoLaunch ? "true" : "false") << "\n";
-    stream << "Hotkey:F8\n";
-
-    if (!m_password.isEmpty()) {
-        stream << "Key:" << encryptor.encrypt(m_password) << "\n";
+    if (m_password.isEmpty()) {
+        m_store.setValue(QStringLiteral("Key"), QString());
     } else {
-        stream << "Key:\n";
+        m_store.setValue(QStringLiteral("Key"), m_encryptor.encrypt(m_password));
     }
 
-    if (!m_initPool.isEmpty()) {
-        stream << "initPool:" << encryptor.encrypt(m_initPool.join(",")) << "\n";
-    } else {
-        stream << "initPool:\n";
-    }
-
-    if (!m_pool.isEmpty()) {
-        stream << "pool:" << encryptor.encrypt(m_pool.join(",")) << "\n";
-    } else {
-        stream << "pool:\n";
-    }
-
-    stream.flush();
+    m_store.save();
 }
-

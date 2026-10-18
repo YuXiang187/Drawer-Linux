@@ -1,5 +1,9 @@
 #pragma once
 
+#include "encryptor.h"
+#include "group_store.h"
+#include "key_value_store.h"
+
 #include <QString>
 #include <QStringList>
 
@@ -9,6 +13,7 @@ public:
     explicit ConfigManager(const QString &overridePath = QString());
     ~ConfigManager();
 
+    // 2 = grouped name lists, 1 = the single list of earlier versions.
     int version() const;
 
     bool fileExists() const;
@@ -23,21 +28,25 @@ public:
     QString password() const;
     void setPassword(const QString &password);
 
+    // Name lists of the active group.
     QStringList initPool() const;
     void setInitPool(const QStringList &names);
 
     QStringList pool() const;
     void setPool(const QStringList &names);
 
+    GroupStore *groups();
+
     void sync();
 
 private:
-    void loadFromFile();
+    void loadSettings();
 
     QString m_filePath;
+    KeyValueStore m_store;
+    Encryptor m_encryptor;
+    GroupStore m_groups;
     bool m_autoLaunch = false;
     bool m_floatingWindow = false;
     QString m_password;
-    QStringList m_initPool;
-    QStringList m_pool;
 };

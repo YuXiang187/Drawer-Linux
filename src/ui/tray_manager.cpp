@@ -16,6 +16,7 @@ TrayManager::TrayManager(ApplicationController *controller, QObject *parent)
     , m_controller(controller)
     , m_trayIcon(new QSystemTrayIcon(this))
     , m_menu(std::make_unique<QMenu>())
+    , m_groupMenu(nullptr)
     , m_actionAutoLaunch(nullptr)
     , m_actionFloatingWindow(nullptr)
 {
@@ -90,6 +91,11 @@ void TrayManager::buildMenu()
         }
     });
 
+    // Group switching, placed next to the editor because both change the
+    // list that is drawn from.
+    m_groupMenu = m_menu->addMenu("分组");
+    connect(m_groupMenu, &QMenu::aboutToShow, this, &TrayManager::rebuildGroupMenu);
+
     // Statistics
     QAction *actionStats = m_menu->addAction("统计");
     connect(actionStats, &QAction::triggered, m_controller, &ApplicationController::showStatistics);
@@ -128,6 +134,24 @@ void TrayManager::buildMenu()
 void TrayManager::show()
 {
     m_trayIcon->show();
+}
+
+void TrayManager::rebuildGroupMenu()
+{
+    m_groupMenu->clear();
+
+    const QString active = m_controller->activeGroupId();
+    const QStringList ids = m_controller->groupIds();
+    for (const QString &id : ids) {
+        QAction *action = m_groupMenu->addAction(m_controller->groupName(id));
+        action->setCheckable(true);
+        action->setChecked(id == active);
+
+        connect(action, &QAction::triggered, this, [this, id]() {
+            if (id != m_controller->activeGroupId())
+                m_controller->activateGroup(id);
+        });
+    }
 }
 
 void TrayManager::syncFloatingWindowAction(bool enabled)
