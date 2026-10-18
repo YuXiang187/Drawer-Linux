@@ -511,13 +511,23 @@ void EditorDialog::onRemove()
 
 void EditorDialog::onApply()
 {
-    const QStringList list = m_model->stringList();
-    if (list.isEmpty()) {
+    // Spaces next to a separating comma are not part of the names, and the
+    // same goes for a space at either end of the list.
+    QStringList names;
+    const QStringList entries = m_model->stringList();
+    names.reserve(entries.size());
+    for (const QString &entry : entries) {
+        const QString name = entry.trimmed();
+        if (!name.isEmpty())
+            names.append(name);
+    }
+
+    if (names.isEmpty()) {
         QMessageBox::warning(this, "应用", "列表不能为空。");
         return;
     }
 
-    m_controller->saveGroupNames(m_currentGroupId, list);
+    m_controller->saveGroupNames(m_currentGroupId, names);
     m_controller->activateGroup(m_currentGroupId);
     m_controller->showStatistics();
     accept();

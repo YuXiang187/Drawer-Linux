@@ -24,6 +24,11 @@ public:
     QString draw();
     QString randomName();
 
+    // Up to maxNames entries spread evenly over the draw pool (or over the
+    // name list when the pool is empty), for size estimates. Measuring every
+    // entry of a 45000 name list would be far too slow.
+    QStringList sample(int maxNames) const;
+
     void reset();
 
     int size() const;

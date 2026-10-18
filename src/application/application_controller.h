@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QStringList>
+#include <QTimer>
 #include <memory>
 
 class NamePool;
@@ -66,6 +67,11 @@ private:
     // Writes the floating window state to Drawer.config as Mode:0 / Mode:1.
     void saveFloatingWindowState(bool enabled);
 
+    // Encrypts and stores the draw history staged since the last flush. The
+    // history of a large list is written in batches instead of after every
+    // single draw.
+    void flushPendingPools();
+
     // True while the desktop session (logout/shutdown) is tearing the
     // application down. Window closes during that phase are not user closes.
     bool isSessionShuttingDown() const;
@@ -76,6 +82,7 @@ private:
     std::unique_ptr<AutoLaunch> m_autoLaunch;
     std::unique_ptr<DrawWindow> m_drawWindow;
     std::unique_ptr<FloatingWindow> m_floatingWindow;
+    QTimer m_poolFlushTimer;
     bool m_floatingWindowEnabled = false;
     bool m_isQuitting = false;
 };

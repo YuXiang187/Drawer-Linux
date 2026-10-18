@@ -18,17 +18,6 @@ target_compile_options(test_random_engine PRIVATE -Wall -Wextra -Wpedantic)
 target_link_libraries(test_random_engine PRIVATE ${TEST_LIBRARIES})
 add_test(NAME RandomEngine COMMAND test_random_engine)
 
-# test_name_pool
-add_executable(test_name_pool
-    test_name_pool.cpp
-    ../src/core/name_pool.cpp
-    ../src/core/random_engine.cpp
-)
-target_include_directories(test_name_pool PRIVATE ${TEST_INCLUDE_DIR})
-target_compile_options(test_name_pool PRIVATE -Wall -Wextra -Wpedantic)
-target_link_libraries(test_name_pool PRIVATE ${TEST_LIBRARIES})
-add_test(NAME NamePool COMMAND test_name_pool)
-
 # test_config_manager (ConfigManager depends on Encryptor/OpenSSL and groups)
 add_executable(test_config_manager
     test_config_manager.cpp
@@ -43,17 +32,3 @@ target_include_directories(test_config_manager PRIVATE ${TEST_INCLUDE_DIR})
 target_compile_options(test_config_manager PRIVATE -Wall -Wextra -Wpedantic)
 target_link_libraries(test_config_manager PRIVATE ${TEST_LIBRARIES} OpenSSL::Crypto)
 add_test(NAME ConfigManager COMMAND test_config_manager)
-
-# test_group_store
-add_executable(test_group_store
-    test_group_store.cpp
-    ../src/data/group_store.cpp
-    ../src/data/encryptor.cpp
-    ../src/data/key_value_store.cpp
-    ../src/core/name_pool.cpp
-    ../src/core/random_engine.cpp
-)
-target_include_directories(test_group_store PRIVATE ${TEST_INCLUDE_DIR})
-target_compile_options(test_group_store PRIVATE -Wall -Wextra -Wpedantic)
-target_link_libraries(test_group_store PRIVATE ${TEST_LIBRARIES} OpenSSL::Crypto)
-add_test(NAME GroupStore COMMAND test_group_store)

@@ -76,7 +76,13 @@ QStringList GroupStore::init(const QString &id) const
     if (id.isEmpty())
         return QStringList();
 
-    return decryptedList(QStringLiteral("initPool@") + id);
+    const auto cached = m_initCache.constFind(id);
+    if (cached != m_initCache.constEnd())
+        return cached.value();
+
+    const QStringList names = decryptedList(QStringLiteral("initPool@") + id);
+    m_initCache.insert(id, names);
+    return names;
 }
 
 void GroupStore::setInit(const QString &id, const QStringList &names)
@@ -85,8 +91,13 @@ void GroupStore::setInit(const QString &id, const QStringList &names)
         return;
 
     // Keep the draw history of the names that remain listed, exactly like
-    // changing the list of the single-group version did.
+    // changing the list of the single-group version did. The pool may hold
+    // draws that are staged but not written yet, so read it from the cache.
     const QStringList rebuiltPool = buildSyncedPool(names, pool(id));
+
+    m_initCache.insert(id, names);
+    m_poolCache.insert(id, rebuiltPool);
+    m_dirtyPools.remove(id);
 
     writeList(QStringLiteral("initPool@") + id, names);
     writeList(QStringLiteral("pool@") + id, rebuiltPool);
@@ -97,7 +108,13 @@ QStringList GroupStore::pool(const QString &id) const
     if (id.isEmpty())
         return QStringList();
 
-    return decryptedList(QStringLiteral("pool@") + id);
+    const auto cached = m_poolCache.constFind(id);
+    if (cached != m_poolCache.constEnd())
+        return cached.value();
+
+    const QStringList names = decryptedList(QStringLiteral("pool@") + id);
+    m_poolCache.insert(id, names);
+    return names;
 }
 
 void GroupStore::setPool(const QString &id, const QStringList &names)
@@ -105,7 +122,34 @@ void GroupStore::setPool(const QString &id, const QStringList &names)
     if (id.isEmpty())
         return;
 
+    m_poolCache.insert(id, names);
+    m_dirtyPools.remove(id);
     writeList(QStringLiteral("pool@") + id, names);
+}
+
+void GroupStore::stagePool(const QString &id, const QStringList &names)
+{
+    if (id.isEmpty())
+        return;
+
+    m_poolCache.insert(id, names);
+    m_dirtyPools.insert(id);
+}
+
+bool GroupStore::flushPools()
+{
+    if (m_dirtyPools.isEmpty())
+        return false;
+
+    const QSet<QString> dirty = m_dirtyPools;
+    m_dirtyPools.clear();
+
+    for (const QString &id : dirty) {
+        const auto cached = m_poolCache.constFind(id);
+        if (cached != m_poolCache.constEnd())
+            writeList(QStringLiteral("pool@") + id, cached.value());
+    }
+    return true;
 }
 
 int GroupStore::count() const
@@ -139,6 +183,10 @@ QString GroupStore::add(const QString &name)
     const QString sample = m_encryptor.encrypt(kSampleNames.join(QLatin1Char(',')));
     m_store->setValue(QStringLiteral("initPool@") + id, sample);
     m_store->setValue(QStringLiteral("pool@") + id, sample);
+
+    m_initCache.insert(id, kSampleNames);
+    m_poolCache.insert(id, kSampleNames);
+    m_dirtyPools.remove(id);
     return id;
 }
 
@@ -163,6 +211,11 @@ bool GroupStore::remove(const QString &id)
     m_store->remove(QStringLiteral("name@") + id);
     m_store->remove(QStringLiteral("initPool@") + id);
     m_store->remove(QStringLiteral("pool@") + id);
+
+    // Drop the cached lists too, so a staged history is never written back.
+    m_initCache.remove(id);
+    m_poolCache.remove(id);
+    m_dirtyPools.remove(id);
 
     if (id == active)
         m_store->setValue(QStringLiteral("CurrentGroup"), list.first());

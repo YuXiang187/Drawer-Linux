@@ -2,6 +2,8 @@
 
 #include "encryptor.h"
 
+#include <QHash>
+#include <QSet>
 #include <QString>
 #include <QStringList>
 
@@ -40,6 +42,15 @@ public:
     QStringList pool(const QString &id) const;
     void setPool(const QString &id, const QStringList &names);
 
+    // Stores a draw history in memory and marks it for the next flush. A
+    // large list must not be encrypted and written on every draw; the caller
+    // batches the writes and calls flushPools() (followed by
+    // ConfigManager::sync()) from a timer, and once more when quitting.
+    void stagePool(const QString &id, const QStringList &names);
+    // Writes every staged history into the store, returns true when there was
+    // anything to write.
+    bool flushPools();
+
     int count() const;
 
     // Creates a group seeded with the sample names and returns its id.
@@ -58,4 +69,11 @@ private:
 
     KeyValueStore *m_store;
     Encryptor m_encryptor;
+
+    // Decrypting a list of tens of thousands of names is expensive, so every
+    // group is decrypted once and kept here. QStringList is implicitly
+    // shared, so handing out a value does not copy the names.
+    mutable QHash<QString, QStringList> m_initCache;
+    mutable QHash<QString, QStringList> m_poolCache;
+    QSet<QString> m_dirtyPools;
 };

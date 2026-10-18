@@ -3,6 +3,7 @@
 
 #include <QHash>
 
+#include <algorithm>
 #include <cmath>
 
 namespace {
@@ -49,8 +50,9 @@ QString NamePool::draw()
     if (m_initPool.isEmpty())
         return QString();
 
-    syncPool();
-
+    // The pool invariant is kept by setNames()/setState()/addName()/
+    // removeName(); a draw only moves one entry, so rebuilding it through
+    // syncPool() on every draw would be wasted work on a large list.
     int index = 0;
     for (;;) {
         const double stddev = static_cast<double>(m_pool.size()) / kStddevScalingFactor;
@@ -64,9 +66,9 @@ QString NamePool::draw()
 
     const QString value = m_pool.at(index);
 
-    // If multiple identical values exist, it locates the first occurrence.
-    const int first = m_pool.indexOf(value);
-    m_pool.removeAt(first);
+    // Move the drawn entry to the end by its index; searching for the value
+    // would scan the whole list when it holds tens of thousands of names.
+    m_pool.removeAt(index);
     m_pool.append(value);
 
     return value;
@@ -83,6 +85,22 @@ QString NamePool::randomName()
         return QString();
 
     return m_pool.at(m_random.nextInt(0, m_pool.size() - 1));
+}
+
+QStringList NamePool::sample(int maxNames) const
+{
+    const QStringList &source = m_pool.isEmpty() ? m_initPool : m_pool;
+    const int count = static_cast<int>(std::min<qsizetype>(source.size(), maxNames));
+    if (count <= 0)
+        return QStringList();
+
+    QStringList result;
+    result.reserve(count);
+    for (int i = 0; i < count; ++i) {
+        const int index = static_cast<int>(static_cast<qint64>(i) * source.size() / count);
+        result.append(source.at(index));
+    }
+    return result;
 }
 
 void NamePool::syncPool()

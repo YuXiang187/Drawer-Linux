@@ -26,6 +26,7 @@ set(SOURCES
     src/ui/floating_window.cpp
     src/ui/editor_dialog.cpp
     src/ui/password_dialog.cpp
+    src/ui/stats_dialog.cpp
 )
 
 set(HEADERS
@@ -44,6 +45,7 @@ set(HEADERS
     src/ui/floating_window.h
     src/ui/editor_dialog.h
     src/ui/password_dialog.h
+    src/ui/stats_dialog.h
 )
 
 qt_add_executable(${PROJECT_NAME} MANUAL_FINALIZATION

@@ -5,6 +5,7 @@
 #include "platform/auto_launch.h"
 #include "ui/draw_window.h"
 #include "ui/floating_window.h"
+#include "ui/stats_dialog.h"
 
 #include <QCoreApplication>
 #include <QDBusConnection>
@@ -17,6 +18,12 @@ namespace {
 // The session bus answers isShuttingDown() in well under a millisecond. This
 // upper bound only matters when ksmserver is unresponsive.
 constexpr int kSessionQueryTimeoutMs = 500;
+
+// A draw only moves one entry of the history; encrypting and writing a list
+// of tens of thousands of names after every draw would stall the animation
+// for no benefit. The pending history is written once the draws settle, and
+// again when the application quits.
+constexpr int kPoolFlushDelayMs = 2000;
 } // namespace
 
 ApplicationController::ApplicationController(QObject *parent)
@@ -28,6 +35,10 @@ ApplicationController::ApplicationController(QObject *parent)
     , m_drawWindow(std::make_unique<DrawWindow>(m_namePool.get()))
     , m_floatingWindow(std::make_unique<FloatingWindow>())
 {
+    m_poolFlushTimer.setSingleShot(true);
+    m_poolFlushTimer.setInterval(kPoolFlushDelayMs);
+    connect(&m_poolFlushTimer, &QTimer::timeout, this, &ApplicationController::flushPendingPools);
+
     connect(m_singleInstance.get(), &SingleInstance::commandReceived, this, [this](const QString &cmd) {
         if (cmd == "trigger") {
             triggerDraw();
@@ -46,9 +57,9 @@ ApplicationController::ApplicationController(QObject *parent)
         m_floatingWindow->setRunning(false);
         emit drawActiveChanged(false);
 
-        m_config->setInitPool(m_namePool->names());
-        m_config->setPool(m_namePool->pool());
-        m_config->sync();
+        // Only the draw history changed; the name list itself is untouched.
+        m_config->groups()->stagePool(m_config->groups()->activeId(), m_namePool->pool());
+        m_poolFlushTimer.start();
     });
 
     // The window was closed from outside the menu (e.g. Alt+F4): keep the
@@ -73,7 +84,10 @@ ApplicationController::ApplicationController(QObject *parent)
         // aboutToQuit is emitted, so watch QEvent::Quit to learn about the
         // shutdown early enough (see prepareForQuit()).
         app->installEventFilter(this);
-        connect(app, &QCoreApplication::aboutToQuit, this, [this]() { m_isQuitting = true; });
+        connect(app, &QCoreApplication::aboutToQuit, this, [this]() {
+            flushPendingPools();
+            m_isQuitting = true;
+        });
     }
 }
 
@@ -87,7 +101,17 @@ bool ApplicationController::eventFilter(QObject *watched, QEvent *event)
 
 void ApplicationController::prepareForQuit()
 {
+    // Write the pending draw history before the process goes away.
+    flushPendingPools();
     m_isQuitting = true;
+}
+
+void ApplicationController::flushPendingPools()
+{
+    m_poolFlushTimer.stop();
+
+    if (m_config->groups()->flushPools())
+        m_config->sync();
 }
 
 bool ApplicationController::isSessionShuttingDown() const
@@ -320,12 +344,8 @@ void ApplicationController::saveFloatingWindowState(bool enabled)
 
 void ApplicationController::showStatistics()
 {
-    const QStringList names = currentNames();
-    const QString text = QString("抽取分组：%1\n\n抽取数量：%2\n\n抽取名单：%3")
-                             .arg(groupName(activeGroupId()))
-                             .arg(names.size())
-                             .arg(names.join(", "));
-    QMessageBox::information(nullptr, "统计", text);
+    // A message box truncates a large list; the dialog scrolls through all of it.
+    StatsDialog::showStats(nullptr, groupName(activeGroupId()), currentNames());
 }
 
 void ApplicationController::about()

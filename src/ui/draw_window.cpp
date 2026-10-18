@@ -4,6 +4,7 @@
 #include <QApplication>
 #include <QCursor>
 #include <QFont>
+#include <QFontMetricsF>
 #include <QGuiApplication>
 #include <QLabel>
 #include <QPalette>
@@ -13,12 +14,24 @@
 #include <QTimer>
 #include <QVBoxLayout>
 
+#include <algorithm>
+#include <cmath>
+
 namespace {
 constexpr int kFlashFrames = 8;
 constexpr int kFlashIntervalMs = 60;
 constexpr int kProgressSteps = 100;
 constexpr int kFadeIntervalMs = 14;
 const QColor kFlashColor(128, 128, 128);
+
+constexpr int kBaseWidth = 450;
+constexpr int kBaseHeight = 250;
+constexpr int kMarginX = 12;
+constexpr double kFontSize = 60.0;
+constexpr double kMinFontSize = 10.0;
+// names measured to find the widest one; a large list is estimated from a
+// sample instead of measuring every entry
+constexpr int kSampleCount = 64;
 } // namespace
 
 DrawWindow::DrawWindow(NamePool *pool, QWidget *parent)
@@ -71,9 +84,16 @@ void DrawWindow::start()
     m_progressValue = kProgressSteps;
     m_progressBar->setValue(m_progressValue);
     setLabelColor(kFlashColor);
+
+    // Pick the result before the animation runs so the window can be sized to
+    // it; the preview frames below deliberately show unrelated names.
+    m_drawnName = m_pool->draw();
     m_label->setText(m_pool->randomName());
 
-    centerOnScreen();
+    QScreen *screen = targetScreen();
+    fitToNames(screen);
+    centerOnScreen(screen);
+
     show();
     raise();
     activateWindow();
@@ -94,7 +114,7 @@ void DrawWindow::onFlashTick()
 
     // last frame
     if (m_flashFrame == kFlashFrames) {
-        m_label->setText(m_pool->draw());
+        m_label->setText(m_drawnName);
         setLabelColor(resultColor());
         return;
     }
@@ -132,18 +152,55 @@ QColor DrawWindow::resultColor() const
     return palette.color(QPalette::WindowText);
 }
 
-void DrawWindow::centerOnScreen()
+QScreen *DrawWindow::targetScreen() const
 {
     QScreen *screen = QGuiApplication::screenAt(QCursor::pos());
-    if (!screen)
-        screen = QGuiApplication::primaryScreen();
+    return screen ? screen : QGuiApplication::primaryScreen();
+}
+
+void DrawWindow::fitToNames(QScreen *screen)
+{
+    QStringList names = m_pool->sample(kSampleCount);
+    if (!m_drawnName.isEmpty())
+        names.append(m_drawnName);
+
+    const int limit = screen ? screen->availableGeometry().width() - kMarginX * 2
+                             : kBaseWidth - kMarginX * 2;
+
+    double size = kFontSize;
+    int required = widestName(names, size);
+    while (required > limit && required > 0 && size > kMinFontSize) {
+        size = std::max(kMinFontSize, size * limit / required);
+        required = widestName(names, size);
+    }
+
+    QFont font = m_label->font();
+    font.setPointSizeF(size);
+    m_label->setFont(font);
+
+    int width = std::max(kBaseWidth, required + kMarginX * 2);
+    if (screen)
+        width = std::min(width, screen->availableGeometry().width());
+    resize(width, kBaseHeight);
+}
+
+int DrawWindow::widestName(const QStringList &names, double pointSize) const
+{
+    QFont probe = m_label->font();
+    probe.setPointSizeF(pointSize);
+    const QFontMetricsF metrics(probe);
+
+    int widest = 0;
+    for (const QString &name : names)
+        widest = std::max(widest, static_cast<int>(std::ceil(metrics.horizontalAdvance(name))));
+    return widest;
+}
+
+void DrawWindow::centerOnScreen(QScreen *screen)
+{
     if (!screen)
         return;
 
-    resize(450, 250);
-
-    QRect geo = screen->availableGeometry();
-    int x = geo.center().x() - width() / 2;
-    int y = geo.center().y() - height() / 2;
-    move(x, y);
+    const QRect geo = screen->availableGeometry();
+    move(geo.center().x() - width() / 2, geo.center().y() - height() / 2);
 }
